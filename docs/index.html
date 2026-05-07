@@ -156,50 +156,81 @@
           <figcaption>Overview of the quantitative metrics and qualitative evidence used in the result section.</figcaption>
         </figure>
         <h3 class="subsection-title">Metric Evidence</h3>
-        <div class="result-grid">
-          <article class="result-card">
-            <img src="assets/images/ips.svg" alt="IPS success evidence from point-cloud and mesh comparison." />
-            <h3>IPS Success</h3>
-            <p>Point-cloud evidence for interaction-pose safety and geometry-aware terminal pose verification.</p>
+        <div class="evidence-list">
+          <article class="evidence-card">
+            <div class="evidence-copy">
+              <span class="metric-label">94%</span>
+              <h3>IPS Success</h3>
+              <p>Point-cloud evidence for interaction-pose safety and geometry-aware terminal pose verification.</p>
+            </div>
+            <figure>
+              <img src="assets/images/ips.svg" alt="IPS success evidence from point-cloud and mesh comparison." />
+            </figure>
           </article>
-          <article class="result-card">
-            <img src="assets/images/memory-reduction.svg" alt="Memory reduction feature realtime result." />
-            <h3>Memory Reduction</h3>
-            <p>Feature distillation reduces semantic memory footprint while preserving open-vocabulary matching quality.</p>
+          <article class="evidence-card">
+            <div class="evidence-copy">
+              <span class="metric-label">91.4%</span>
+              <h3>Memory Reduction</h3>
+              <p>Feature distillation reduces semantic memory footprint while preserving open-vocabulary matching quality.</p>
+            </div>
+            <figure>
+              <img src="assets/images/memory-reduction.svg" alt="Memory reduction feature realtime result." />
+            </figure>
           </article>
-          <article class="result-card">
-            <img src="assets/images/collision-rate.svg" alt="Dynamic adaptation result corresponding to collision rate." />
-            <h3>Collision Rate</h3>
-            <p>Dynamic memory adaptation helps avoid obsolete paths and reduces collisions after scene changes.</p>
+          <article class="evidence-card">
+            <div class="evidence-copy">
+              <span class="metric-label">0%</span>
+              <h3>Collision Rate</h3>
+              <p>Dynamic memory adaptation helps avoid obsolete paths and reduces collisions after scene changes.</p>
+            </div>
+            <figure>
+              <img src="assets/images/collision-rate.svg" alt="Dynamic adaptation result corresponding to collision rate." />
+            </figure>
           </article>
-          <article class="result-card">
-            <img src="assets/images/navigation-error.svg" alt="Pure Pursuit navigation error evidence." />
-            <h3>Navigation Error</h3>
-            <p>Humanoid navigation control uses adaptive Pure Pursuit tracking to maintain stable terminal accuracy.</p>
+          <article class="evidence-card">
+            <div class="evidence-copy">
+              <span class="metric-label">0.12m</span>
+              <h3>Navigation Error</h3>
+              <p>Humanoid navigation control uses adaptive Pure Pursuit tracking to maintain stable terminal accuracy.</p>
+            </div>
+            <figure>
+              <img src="assets/images/navigation-error.svg" alt="Pure Pursuit navigation error evidence." />
+            </figure>
           </article>
         </div>
         <h3 class="subsection-title">Qualitative Results</h3>
-        <div class="result-grid qualitative-grid">
-          <article class="result-card">
+        <div class="qualitative-layout">
+          <article class="showcase-card real-robot-card">
+            <div class="showcase-copy">
+              <span class="eyebrow">Real Robot</span>
+              <h3>Real Robot Experiments</h3>
+              <p>Unitree G1 executes patrol, office navigation, dynamic replanning, and object retrieval tasks.</p>
+            </div>
             <img src="assets/images/real-robot.svg" alt="Real robot experiment sequences." />
-            <h3>Real Robot Experiments</h3>
-            <p>Unitree G1 executes patrol, office navigation, dynamic replanning, and object retrieval tasks.</p>
           </article>
-          <article class="result-card">
-            <img src="assets/images/meshes.svg" alt="Reconstructed object meshes." />
-            <h3>Reconstructed Object Meshes</h3>
-            <p>The Geometry Field reconstructs interaction-relevant object meshes for downstream safety checks.</p>
-          </article>
-          <article class="result-card">
-            <img src="assets/images/pcl-vs-mesh.svg" alt="Watertight mesh compared with sparse point cloud." />
-            <h3>Mesh vs Sparse Point Cloud</h3>
-            <p>Watertight meshes expose continuous surfaces for collision checks that sparse Gaussian centroids can miss.</p>
-          </article>
-          <article class="result-card">
-            <img src="assets/images/visual-quality.svg" alt="Denoised mapping quality and appearance-field update." />
-            <h3>Appearance Field Quality</h3>
-            <p>Confidence gating improves denoised mapping quality and supports appearance-field memory updates.</p>
-          </article>
+          <div class="qualitative-grid">
+            <article class="showcase-card">
+              <img src="assets/images/meshes.svg" alt="Reconstructed object meshes." />
+              <div class="showcase-copy">
+                <h3>Reconstructed Object Meshes</h3>
+                <p>The Geometry Field reconstructs interaction-relevant object meshes for downstream safety checks.</p>
+              </div>
+            </article>
+            <article class="showcase-card">
+              <img src="assets/images/pcl-vs-mesh.svg" alt="Watertight mesh compared with sparse point cloud." />
+              <div class="showcase-copy">
+                <h3>Mesh vs Sparse Point Cloud</h3>
+                <p>Watertight meshes expose continuous surfaces for collision checks that sparse Gaussian centroids can miss.</p>
+              </div>
+            </article>
+            <article class="showcase-card">
+              <img src="assets/images/visual-quality.svg" alt="Denoised mapping quality and appearance-field update." />
+              <div class="showcase-copy">
+                <h3>Appearance Field Quality</h3>
+                <p>Confidence gating improves denoised mapping quality and supports appearance-field memory updates.</p>
+              </div>
+            </article>
+          </div>
         </div>
       </section>
 
