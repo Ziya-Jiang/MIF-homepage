@@ -151,86 +151,35 @@
           <div class="metric"><strong>0%</strong><span>observed collision rate</span></div>
           <div class="metric"><strong>0.12m</strong><span>mean terminal error</span></div>
         </div>
-        <figure class="wide-figure">
-          <img src="assets/images/results.svg" alt="MIF quantitative result highlights." />
-          <figcaption>Overview of the quantitative metrics and qualitative evidence used in the result section.</figcaption>
-        </figure>
-        <h3 class="subsection-title">Metric Evidence</h3>
-        <div class="evidence-list">
-          <article class="evidence-card">
-            <div class="evidence-copy">
-              <span class="metric-label">94%</span>
-              <h3>IPS Success</h3>
-              <p>Point-cloud evidence for interaction-pose safety and geometry-aware terminal pose verification.</p>
+        <div class="key-results-board" aria-label="Key result figures">
+          <article class="key-result-card key-result-large">
+            <img src="assets/images/ips.svg" alt="IPS success evidence from point-cloud and mesh comparison." />
+            <div>
+              <span>IPS Success</span>
+              <h3>Dense geometry makes interaction poses safer</h3>
             </div>
-            <figure>
-              <img src="assets/images/ips.svg" alt="IPS success evidence from point-cloud and mesh comparison." />
-            </figure>
           </article>
-          <article class="evidence-card">
-            <div class="evidence-copy">
-              <span class="metric-label">91.4%</span>
-              <h3>Memory Reduction</h3>
-              <p>Feature distillation reduces semantic memory footprint while preserving open-vocabulary matching quality.</p>
+          <article class="key-result-card">
+            <img src="assets/images/memory-reduction.svg" alt="Memory reduction feature realtime result." />
+            <div>
+              <span>Memory Reduction</span>
+              <h3>Feature distillation keeps memory practical</h3>
             </div>
-            <figure>
-              <img src="assets/images/memory-reduction.svg" alt="Memory reduction feature realtime result." />
-            </figure>
           </article>
-          <article class="evidence-card">
-            <div class="evidence-copy">
-              <span class="metric-label">0%</span>
-              <h3>Collision Rate</h3>
-              <p>Dynamic memory adaptation helps avoid obsolete paths and reduces collisions after scene changes.</p>
+          <article class="key-result-card">
+            <img src="assets/images/navigation-error.svg" alt="Pure Pursuit navigation error evidence." />
+            <div>
+              <span>Navigation Error</span>
+              <h3>Stable tracking for humanoid navigation</h3>
             </div>
-            <figure>
-              <img src="assets/images/collision-rate.svg" alt="Dynamic adaptation result corresponding to collision rate." />
-            </figure>
           </article>
-          <article class="evidence-card">
-            <div class="evidence-copy">
-              <span class="metric-label">0.12m</span>
-              <h3>Navigation Error</h3>
-              <p>Humanoid navigation control uses adaptive Pure Pursuit tracking to maintain stable terminal accuracy.</p>
+          <article class="key-result-card key-result-wide">
+            <img src="assets/images/collision-rate.svg" alt="Dynamic adaptation result corresponding to collision rate." />
+            <div>
+              <span>Collision Rate</span>
+              <h3>Local memory updates avoid obsolete collision-prone paths</h3>
             </div>
-            <figure>
-              <img src="assets/images/navigation-error.svg" alt="Pure Pursuit navigation error evidence." />
-            </figure>
           </article>
-        </div>
-        <h3 class="subsection-title">Qualitative Results</h3>
-        <div class="qualitative-layout">
-          <article class="showcase-card real-robot-card">
-            <div class="showcase-copy">
-              <span class="eyebrow">Real Robot</span>
-              <h3>Real Robot Experiments</h3>
-              <p>Unitree G1 executes patrol, office navigation, dynamic replanning, and object retrieval tasks.</p>
-            </div>
-            <img src="assets/images/real-robot.svg" alt="Real robot experiment sequences." />
-          </article>
-          <div class="qualitative-grid">
-            <article class="showcase-card">
-              <img src="assets/images/meshes.svg" alt="Reconstructed object meshes." />
-              <div class="showcase-copy">
-                <h3>Reconstructed Object Meshes</h3>
-                <p>The Geometry Field reconstructs interaction-relevant object meshes for downstream safety checks.</p>
-              </div>
-            </article>
-            <article class="showcase-card">
-              <img src="assets/images/pcl-vs-mesh.svg" alt="Watertight mesh compared with sparse point cloud." />
-              <div class="showcase-copy">
-                <h3>Mesh vs Sparse Point Cloud</h3>
-                <p>Watertight meshes expose continuous surfaces for collision checks that sparse Gaussian centroids can miss.</p>
-              </div>
-            </article>
-            <article class="showcase-card">
-              <img src="assets/images/visual-quality.svg" alt="Denoised mapping quality and appearance-field update." />
-              <div class="showcase-copy">
-                <h3>Appearance Field Quality</h3>
-                <p>Confidence gating improves denoised mapping quality and supports appearance-field memory updates.</p>
-              </div>
-            </article>
-          </div>
         </div>
       </section>
 
@@ -238,21 +187,37 @@
         <div class="section-heading">
           <p class="eyebrow">Gallery</p>
           <h2>Paper Figures</h2>
-          <p>Selected figures exported from the paper and supplementary material.</p>
+          <p>Supplementary qualitative figures are shown as compact panels so large source images do not dominate the page.</p>
         </div>
-        <div class="gallery-grid">
-          <figure>
-            <img src="assets/images/teaser.jpeg" alt="MIF teaser figure." />
-            <figcaption>Teaser: MIF for robust humanoid navigation.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/images/pipeline.svg" alt="Pipeline placeholder." />
-            <figcaption>Method overview: appearance, spatial, and geometry fields.</figcaption>
-          </figure>
-          <figure>
-            <img src="assets/images/results.svg" alt="Results placeholder." />
-            <figcaption>Results: dynamic adaptation, mesh recovery, and IPS verification.</figcaption>
-          </figure>
+        <div class="supplement-grid">
+          <article class="supplement-card supplement-wide">
+            <img src="assets/images/real-robot.svg" alt="Real robot experiment sequences." />
+            <div>
+              <h3>Real Robot Experiments</h3>
+              <p>Real-world Unitree G1 patrol, navigation, replanning, and object retrieval sequences.</p>
+            </div>
+          </article>
+          <article class="supplement-card">
+            <img src="assets/images/meshes.svg" alt="Reconstructed object meshes." />
+            <div>
+              <h3>Reconstructed Object Meshes</h3>
+              <p>Object meshes generated by the Geometry Field.</p>
+            </div>
+          </article>
+          <article class="supplement-card">
+            <img src="assets/images/pcl-vs-mesh.svg" alt="Watertight mesh compared with sparse point cloud." />
+            <div>
+              <h3>Mesh vs Sparse Point Cloud</h3>
+              <p>Continuous watertight geometry exposes collision constraints missed by sparse centroids.</p>
+            </div>
+          </article>
+          <article class="supplement-card">
+            <img src="assets/images/visual-quality.svg" alt="Denoised mapping quality and appearance-field update." />
+            <div>
+              <h3>Appearance Field Quality</h3>
+              <p>Denoised mapping quality and appearance-field memory update.</p>
+            </div>
+          </article>
         </div>
       </section>
 

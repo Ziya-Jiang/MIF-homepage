@@ -244,8 +244,8 @@ pre {
 .card-grid,
 .metric-grid,
 .gallery-grid,
-.evidence-list,
-.qualitative-grid {
+.key-results-board,
+.supplement-grid {
   display: grid;
   gap: 20px;
 }
@@ -286,17 +286,15 @@ pre {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.subsection-title {
-  margin: 34px 0 16px;
+.key-results-board {
+  grid-template-columns: 1.2fr 1fr;
+  grid-auto-rows: minmax(250px, auto);
+  align-items: stretch;
+  margin-top: 22px;
 }
 
-.evidence-list {
-  gap: 18px;
-  margin-bottom: 12px;
-}
-
-.evidence-card,
-.showcase-card {
+.key-result-card,
+.supplement-card {
   overflow: hidden;
   border: 1px solid var(--soft);
   border-radius: 28px;
@@ -304,98 +302,92 @@ pre {
   box-shadow: 0 16px 44px rgba(15, 23, 42, 0.08);
 }
 
-.evidence-card {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  align-items: stretch;
-}
-
-.evidence-copy,
-.showcase-copy {
-  padding: 24px;
-}
-
-.evidence-copy {
+.key-result-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  border-right: 1px solid var(--soft);
+  min-height: 0;
+}
+
+.key-result-large {
+  grid-row: span 2;
+}
+
+.key-result-wide {
+  grid-column: 1 / -1;
+}
+
+.key-result-card img {
+  width: 100%;
+  height: 100%;
+  min-height: 260px;
+  max-height: 460px;
+  padding: 18px;
+  object-fit: contain;
+  background: #ffffff;
+}
+
+.key-result-large img {
+  max-height: 620px;
+}
+
+.key-result-wide img {
+  max-height: 520px;
+}
+
+.key-result-card div {
+  padding: 18px 22px 22px;
+  border-top: 1px solid var(--soft);
   background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 
-.metric-label {
-  display: inline-flex;
-  width: fit-content;
-  margin-bottom: 12px;
-  padding: 7px 12px;
-  border-radius: 999px;
-  background: #dbeafe;
-  color: var(--primary-dark);
-  font-size: 20px;
+.key-result-card span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--primary);
+  font-size: 13px;
   font-weight: 850;
-  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
-.evidence-card figure {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 320px;
+.key-result-card h3 {
   margin: 0;
-  padding: 18px;
-  background: #ffffff;
+  font-size: 20px;
+  line-height: 1.25;
 }
 
-.evidence-card img {
-  width: 100%;
-  max-height: 520px;
-  object-fit: contain;
-  background: #ffffff;
-}
-
-.qualitative-layout {
-  display: grid;
-  gap: 20px;
-}
-
-.real-robot-card {
-  display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
-  align-items: start;
-  padding: 18px;
-}
-
-.real-robot-card .showcase-copy {
-  position: sticky;
-  top: 92px;
-  padding: 14px 20px 20px 6px;
-}
-
-.real-robot-card img {
-  width: 100%;
-  max-height: 980px;
-  object-fit: contain;
-  border-radius: 18px;
-  background: #ffffff;
-}
-
-.qualitative-grid {
+.supplement-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.showcase-card img {
+.supplement-wide {
+  grid-column: 1 / -1;
+}
+
+.supplement-card img {
   width: 100%;
-  height: 330px;
+  height: 300px;
+  padding: 16px;
   object-fit: contain;
   border-bottom: 1px solid var(--soft);
   background: #ffffff;
 }
 
-.showcase-card h3 {
-  margin-top: 0;
+.supplement-wide img {
+  height: 560px;
+  object-position: top center;
 }
 
-.showcase-card p {
+.supplement-card div {
+  padding: 18px 22px 22px;
+}
+
+.supplement-card h3 {
+  margin: 0 0 8px;
+}
+
+.supplement-card p {
   margin-bottom: 0;
 }
 
@@ -425,28 +417,21 @@ pre {
   .card-grid,
   .metric-grid,
   .gallery-grid,
-  .qualitative-grid,
-  .evidence-card,
-  .real-robot-card {
+  .key-results-board,
+  .supplement-grid {
     grid-template-columns: 1fr;
   }
 
-  .evidence-copy {
-    border-right: 0;
-    border-bottom: 1px solid var(--soft);
+  .key-result-large,
+  .key-result-wide,
+  .supplement-wide {
+    grid-row: auto;
+    grid-column: auto;
   }
 
-  .real-robot-card .showcase-copy {
-    position: static;
-    padding: 10px 10px 0;
-  }
-
-  .evidence-card figure {
-    min-height: 0;
-  }
-
-  .real-robot-card img {
-    max-height: 760px;
+  .key-result-card img,
+  .supplement-wide img {
+    max-height: 420px;
   }
 
   .site-header {
