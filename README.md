@@ -15,7 +15,7 @@ This repository contains a GitHub Pages-ready project homepage for:
 Before publishing, replace the placeholders with the final paper media:
 
 - `docs/assets/paper.pdf`
-- `docs/assets/images/teaser.svg` or update the HTML to use `teaser.jpg`
+- `docs/assets/images/teaser.jpeg`
 - `docs/assets/images/pipeline.svg` or update the HTML to use your final pipeline image
 - `docs/assets/images/results.svg` or update the HTML to use your result image
 - `docs/assets/images/video-poster.svg`
