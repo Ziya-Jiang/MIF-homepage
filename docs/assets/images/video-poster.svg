@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">MIF demo video poster</title>
+  <desc id="desc">A placeholder poster for the project demonstration video.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="720" fill="url(#bg)"/>
+  <circle cx="640" cy="360" r="92" fill="#ffffff" opacity="0.95"/>
+  <path d="M615 308 L615 412 L706 360 Z" fill="#1d4ed8"/>
+  <text x="110" y="138" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700">MIF Humanoid Navigation Demo</text>
+  <text x="110" y="210" fill="#dbeafe" font-family="Arial, Helvetica, sans-serif" font-size="30">Replace with your real video poster and MP4/WebM assets.</text>
+  <text x="110" y="640" fill="#bfdbfe" font-family="Arial, Helvetica, sans-serif" font-size="26">Expected video: docs/assets/videos/demo.mp4</text>
+</svg>

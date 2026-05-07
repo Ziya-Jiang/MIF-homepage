@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Learning to Evolve: Multi-modal Interactive Fields for Robust Humanoid Navigation in Dynamic Environments."
+    />
+    <meta property="og:title" content="MIF: Multi-modal Interactive Fields" />
+    <meta
+      property="og:description"
+      content="A humanoid-oriented system for robust semantic grounding, dynamic memory adaptation, and interaction-safe navigation."
+    />
+    <meta property="og:image" content="assets/images/teaser.svg" />
+    <title>MIF | Multi-modal Interactive Fields</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#">MIF</a>
+      <nav class="nav-links" aria-label="Main navigation">
+        <a href="#abstract">Abstract</a>
+        <a href="#video">Video</a>
+        <a href="#method">Method</a>
+        <a href="#results">Results</a>
+        <a href="#citation">Citation</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-content">
+          <p class="venue">Robotics: Science and Systems</p>
+          <h1>Learning to Evolve: Multi-modal Interactive Fields for Robust Humanoid Navigation in Dynamic Environments</h1>
+          <p class="authors">
+            Peifeng Jiang<sup>1</sup>, Hong Liu<sup>1,*</sup>, Wenshuai Wang<sup>1</sup>,
+            Jin Jin<sup>2</sup>, Xia Li<sup>3</sup>
+          </p>
+          <p class="affiliations">
+            <sup>1</sup>State Key Laboratory of General Artificial Intelligence, Peking University, Shenzhen Graduate School<br />
+            <sup>2</sup>Oxford Robotics Institute, University of Oxford<br />
+            <sup>3</sup>Institute for Machine Learning, Department of Computer Science, ETH Zurich
+          </p>
+          <div class="button-row">
+            <a class="button primary" href="assets/paper.pdf">Paper PDF</a>
+            <a class="button" href="#video">Watch Video</a>
+            <a class="button" href="#citation">BibTeX</a>
+            <a class="button muted" href="https://github.com/" rel="noreferrer">Code Coming Soon</a>
+          </div>
+        </div>
+        <figure class="hero-media">
+          <img src="assets/images/teaser.svg" alt="MIF teaser showing appearance, spatial, and geometry fields." />
+          <figcaption>
+            Multi-modal Interactive Fields couple appearance, spatial memory, and geometry for robust humanoid navigation.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section id="video" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Video</p>
+          <h2>Humanoid Navigation and Adaptation Demo</h2>
+          <p>
+            Add your final RSS demonstration videos under <code>docs/assets/videos/</code>. The page is already wired for
+            a main demo and optional adaptation or interaction clips.
+          </p>
+        </div>
+        <div class="video-grid">
+          <article class="video-card">
+            <video controls playsinline preload="metadata" poster="assets/images/video-poster.svg">
+              <source src="assets/videos/demo.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+            <h3>Main System Demo</h3>
+            <p>Unitree G1 executes language-conditioned navigation, detects scene changes, updates memory, and verifies IPS.</p>
+          </article>
+          <article class="video-card compact-card">
+            <h3>Suggested Additional Clips</h3>
+            <ul>
+              <li><code>assets/videos/adaptation.mp4</code>: dynamic scene graph update after object relocation.</li>
+              <li><code>assets/videos/interaction.mp4</code>: mesh recovery and interaction-pose safety verification.</li>
+            </ul>
+          </article>
+        </div>
+      </section>
+
+      <section id="abstract" class="section narrow">
+        <p class="eyebrow">Abstract</p>
+        <h2>Robust Scene Memory for Humanoid Robots</h2>
+        <p>
+          Safe manipulation-oriented navigation for humanoid robots requires scene memory that remains reliable under
+          locomotion-induced perceptual distortion, environmental changes, and interaction-level geometric safety
+          constraints. MIF integrates confidence-aware semantic 3D Gaussian Splatting, discrepancy-triggered spatial
+          memory updates, and task-driven geometric reconstruction in a closed-loop perception-adaptation pipeline.
+          On a Unitree G1 humanoid in a real dynamic office, MIF improves relocation success from 12% to 94% compared
+          with static scene-graph memory, while reducing semantic memory footprint by 91.4%.
+        </p>
+      </section>
+
+      <section id="method" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Method</p>
+          <h2>Three Coupled Fields</h2>
+          <p>
+            MIF treats scene memory as a locally revisable system representation, grounding language queries into
+            spatial memory and interaction-ready geometry.
+          </p>
+        </div>
+        <figure class="wide-figure">
+          <img src="assets/images/pipeline.svg" alt="MIF framework pipeline." />
+          <figcaption>Replace this placeholder with the final method overview figure from the paper.</figcaption>
+        </figure>
+        <div class="card-grid">
+          <article class="info-card">
+            <h3>Appearance Field</h3>
+            <p>
+              Builds a confidence-aware semantic 3DGS representation and suppresses gait-corrupted primitives during
+              rendering and graph construction.
+            </p>
+          </article>
+          <article class="info-card">
+            <h3>Spatial Field</h3>
+            <p>
+              Maintains topological scene memory and triggers local updates when persistent multi-modal discrepancies
+              indicate relocated, removed, or newly introduced objects.
+            </p>
+          </article>
+          <article class="info-card">
+            <h3>Geometry Field</h3>
+            <p>
+              Recovers object-centric meshes on demand and verifies terminal humanoid poses through interaction-pose
+              safety checks.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section id="results" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Results</p>
+          <h2>Real-World Dynamic Office Evaluation</h2>
+          <p>
+            The full ROS1 system runs on a centralized RTX 4090 workstation and communicates with a Unitree G1 humanoid
+            during navigation and interaction trials.
+          </p>
+        </div>
+        <div class="metric-grid">
+          <div class="metric"><strong>94%</strong><span>IPS success</span></div>
+          <div class="metric"><strong>91.4%</strong><span>semantic memory reduction</span></div>
+          <div class="metric"><strong>0%</strong><span>observed collision rate</span></div>
+          <div class="metric"><strong>0.12m</strong><span>mean terminal error</span></div>
+        </div>
+        <figure class="wide-figure">
+          <img src="assets/images/results.svg" alt="MIF quantitative result highlights." />
+          <figcaption>Use this area for adaptation, mesh, navigation, or qualitative result images.</figcaption>
+        </figure>
+      </section>
+
+      <section id="gallery" class="section">
+        <div class="section-heading">
+          <p class="eyebrow">Gallery</p>
+          <h2>Images to Include</h2>
+          <p>Replace the placeholder images with the final figures exported from the paper and supplementary material.</p>
+        </div>
+        <div class="gallery-grid">
+          <figure>
+            <img src="assets/images/teaser.svg" alt="Teaser placeholder." />
+            <figcaption>Teaser: MIF for robust humanoid navigation.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/images/pipeline.svg" alt="Pipeline placeholder." />
+            <figcaption>Method overview: appearance, spatial, and geometry fields.</figcaption>
+          </figure>
+          <figure>
+            <img src="assets/images/results.svg" alt="Results placeholder." />
+            <figcaption>Results: dynamic adaptation, mesh recovery, and IPS verification.</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="citation" class="section narrow">
+        <p class="eyebrow">Citation</p>
+        <h2>BibTeX</h2>
+        <pre><code>@inproceedings{jiang2026mif,
+  title={Learning to Evolve: Multi-modal Interactive Fields for Robust Humanoid Navigation in Dynamic Environments},
+  author={Jiang, Peifeng and Liu, Hong and Wang, Wenshuai and Jin, Jin and Li, Xia},
+  booktitle={Robotics: Science and Systems},
+  year={2026}
+}</code></pre>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>
+        For questions, contact
+        <a href="mailto:jpf@stu.pku.edu.cn">jpf@stu.pku.edu.cn</a>.
+      </p>
+    </footer>
+  </body>
+</html>

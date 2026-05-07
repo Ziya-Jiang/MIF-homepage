@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
+  <title id="title">MIF results placeholder</title>
+  <desc id="desc">A placeholder panel for key quantitative results.</desc>
+  <rect width="1200" height="560" fill="#f8fafc"/>
+  <text x="70" y="88" fill="#0f172a" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700">Key Results</text>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="80" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="120" y="235" fill="#2563eb" font-size="54" font-weight="700">94%</text>
+    <text x="120" y="290" fill="#334155" font-size="23">IPS success</text>
+    <rect x="350" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="390" y="235" fill="#16a34a" font-size="54" font-weight="700">91.4%</text>
+    <text x="390" y="290" fill="#334155" font-size="23">memory reduction</text>
+    <rect x="620" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="660" y="235" fill="#f97316" font-size="54" font-weight="700">0%</text>
+    <text x="660" y="290" fill="#334155" font-size="23">collision rate</text>
+    <rect x="890" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="930" y="235" fill="#7c3aed" font-size="54" font-weight="700">0.12m</text>
+    <text x="930" y="290" fill="#334155" font-size="23">navigation error</text>
+  </g>
+  <text x="70" y="485" fill="#475569" font-family="Arial, Helvetica, sans-serif" font-size="24">Replace this file with your visual, mesh, or dynamic adaptation result image.</text>
+</svg>

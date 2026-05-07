@@ -1,0 +1,143 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{tabularx}
+\usepackage[numbers]{natbib}
+\usepackage{multicol}
+\usepackage[bookmarks=true]{hyperref}
+\usepackage{cuted}
+\usepackage{caption}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{xcolor}
+\bibliographystyle{unsrt}
+
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{4pt}
+
+\pdfinfo{
+   /Author (Author Names Omitted)
+   /Title  (MIF-Humanoid Rebuttal)
+   /Subject (Robotics)
+}
+
+\begin{document}
+
+\twocolumn[
+\begin{center}
+    \textbf{\Large Rebuttal for Paper-ID 256}
+    \vspace{3mm}
+\end{center}
+]
+
+We sincerely thank the Area Chair and all reviewers for their careful and constructive feedback. We agree that the original submission did not sufficiently separate \emph{what is inherited from} and \emph{what is newly contributed}, and that baseline positioning and several definitions should be made clearer. Below we clarify our contribution, provide additional evidence on the main contested points, and specify the revisions we will make in the final manuscript.
+
+\textbf{1) Clarified contribution and scope.}
+Our claim is \emph{not} that improvements on semantic 3DGS, scene graphs, feature compression, or object-level reconstruction are individually introduced here. Rather, the main contribution and novelty is their \emph{humanoid-oriented coupling} for safe mobile manipulation in changing environments: 
+(i) a confidence-gated appearance field that suppresses gait-induced artifacts during online semantic 3DGS mapping; 
+(ii) a discrepancy-triggered spatial field that updates only locally inconsistent regions under scene changes; and 
+(iii) a geometry field that supports task-driven active view selection for safer interaction. And we make the whole system into a deployable state with real world experiment. 
+We will revise the final paper to state this contribution more explicitly and clearly.
+
+\textbf{2) Additional evidence on the main concerns.}
+
+\textbf{Confidence under gait-induced distortion.}
+Several reviewers asked whether the confidence term is heuristic and whether stronger 3DGS baselines are needed. We therefore added comparisons against Deblur-GS and PUP-3DGS under slow- and fast-walk conditions. As shown in Table~\ref{tab:conf}, our confidence-gated formulation improves both reconstruction quality and semantic robustness in online operation. In the revised paper, we will also define $C_i$ more explicitly as a differentiable scalar attached to each Gaussian and clarify its role in weighted rendering and reliability estimation.
+
+\begin{table}[h]
+\centering
+\caption{Comparison under slow-walk (S-) and fast-walk (F-) conditions. PUP-3DGS* denotes out-of-memory failure in online mode.}
+\label{tab:conf}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Method} & \textbf{S-PSNR$\uparrow$} & \textbf{S-SSIM$\uparrow$} & \textbf{F-PSNR$\uparrow$} & \textbf{F-SSIM$\uparrow$} & \textbf{FPR$\downarrow$}\\
+\midrule
+w/o Confidence & 28.4 & 0.88 & 21.6 & 0.72 & 46.5\%\\
+Deblur-GS & 25.14 & 0.80 & 24.67 & 0.70 & 51.4\%\\
+PUP-3DGS & 20.44 & 0.67 & 17.89 & 0.53 & 67.5\%\\
+PUP-3DGS* & -- & -- & -- & -- & --\\
+\textbf{MIF $C_i$ (Ours)} & \textbf{31.2} & \textbf{0.93} & \textbf{29.8} & \textbf{0.89} & \textbf{4.2\%}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Dynamic-scene baselines and fairness.}
+We agree that static baselines alone are insufficient for evaluating dynamic changes. Our original intent was to show the failure mode of static-memory methods under non-revisiting navigation, but this should have been stated more clearly. We therefore added comparisons with Khronos and a periodic-rescan ConceptGraphs variant in the same non-revisiting protocol. The results in Table~\ref{tab:dsg} show that MIF is advantageous in settings where the robot does not revisit prior viewpoints and must detect changes through continuous local monitoring rather than loop closure. We will revise the paper to present this comparison more carefully and narrow the corresponding claims.
+
+\begin{table}[h]
+\centering
+\caption{Change detection under non-revisiting navigation. Protocol: 5-min mapping, object relocated $>$1.5m out-of-view, robot navigates directly without revisiting the old location.}
+\label{tab:dsg}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\begin{tabularx}{\columnwidth}{@{} l
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Method} & \textbf{Reloc SR$\uparrow$} & \textbf{Remov SR$\uparrow$} & \textbf{Addit SR$\uparrow$} & \textbf{Latency$\downarrow$}\\
+\midrule
+HOV-SG (static) & 12\% & 10\% & 0\% & N/A\\
+ConceptGraphs (static) & 15\% & 12\% & 0\% & N/A\\
+ConceptGraphs + Naive Rescan & 38\% & 35\% & 12\% & $\sim$30\,s\\
+Khronos [RSS'24] & $\sim$18\% & 61\% & $\sim$12\% & $\sim$43\,s\\
+\textbf{MIF (Ours)} & \textbf{94\%} & \textbf{98\%} & \textbf{86\%} & \textbf{$<$2\,s}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Threshold selection is quantitative, not ad hoc.}
+The change trigger threshold $\tau$ was questioned. We therefore report the ROC-based operating point in Table~\ref{tab:tau}. Under gait noise, $D$ remains concentrated in a low-value regime, while real changes form a separable high-value mode; $\tau=0.45$ maximizes F1 and was chosen from this distributional separation rather than manual tuning.
+
+\begin{table}[h]
+\centering
+\caption{The operating threshold is selected by quantitative evaluation in real scenarios.}
+\label{tab:tau}
+\footnotesize
+\begin{tabularx}{\columnwidth}{@{}
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Threshold $\bm{\tau}$} & \textbf{TPR$\uparrow$} & \textbf{FPR$\downarrow$} & \textbf{F1$\uparrow$}\\
+\midrule
+0.25 & 99.2\% & 18.7\% & 0.817\\
+0.35 & 97.8\% & 9.3\% & 0.893\\
+\textbf{0.45 (Ours)} & \textbf{95.1\%} & \textbf{4.2\%} & \textbf{0.934}\\
+0.55 & 89.6\% & 1.8\% & 0.913\\
+0.65 & 78.3\% & 0.7\% & 0.866\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{3) Clarifications to previously ambiguous definitions.}
+
+\textbf{Viewpoint utility.}
+We agree that $Q(k)$ was described too loosely as ``information gain.'' More precisely, $Q(k)$ is a \emph{task-driven geometric observation utility} for interaction safety, not a strict information-theoretic objective. Candidate views are sampled on a hemisphere around the object centroid, and $Q(k)$ ranks them using distance, foveal alignment, and geometric anchor density to favor views that best expose the intended interaction surface. We will revise the text accordingly.
+
+\textbf{Semantic compression.}
+We also agree that semantic compression itself is not new. Our point is narrower: in the online humanoid setting, feature distillation reduces memory and latency enough to remain deployable while preserving task-relevant semantics under gait noise. In the revision, we will position this component explicitly relative to LangSplat, Feature Splatting, and LatentBKI, and present it as an efficiency-enabling design choice rather than a standalone novelty claim.
+
+\textbf{Rendered views for the spatial field.}
+The manuscript did not make sufficiently clear that the spatial field uses rendered views from the confidence-gated appearance field rather than raw shaky observations. This is important because stabilized rendering substantially improves object/relationship extraction and reduces false scene updates. We will make this pipeline and the definition of graph nodes/edges explicit in the final version.
+
+\textbf{4) Concrete manuscript revisions.}
+In the revised paper, we will:
+(i) narrow and clarify the novelty claims;
+(ii) expand related work on dynamic scene graphs, confidence/uncertainty in 3DGS, motion-deblurring 3DGS, and semantic feature distillation;
+(iii) unify notation and define all variables in the main text;
+(iv) replace ornate or potentially overstated language with more precise academic wording;
+(v) clarify baseline scope and protocol assumptions; and
+(vi) ensure strict double-blind compliance in all supplementary media. We will also release code upon acceptance.
+
+We thank the reviewers again for helping us improve the clarity, positioning, and rigor of the paper.
+\end{document}

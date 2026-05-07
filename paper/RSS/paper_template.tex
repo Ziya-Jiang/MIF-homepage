@@ -1,0 +1,1169 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{makecell} 
+\usepackage{tabularx}
+% numbers option provides compact numerical references in the text. 
+\usepackage{tcolorbox}
+\usepackage[numbers]{natbib}
+\usepackage{multicol}
+\usepackage[bookmarks=true]{hyperref}
+\usepackage{cuted}
+\usepackage{caption}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\bibliographystyle{unsrt}
+\usepackage{xcolor}
+
+\newcommand{\COMMENT}[1]{\hfill \textcolor{gray}{$\triangleright$ #1}}
+
+\pdfinfo{
+   /Author (Author Names Omitted)
+   /Title  (MIF-Humanoid)
+   /Subject (Robotics)
+   /Keywords (Robots;Embodied AI;3DGS)
+}
+
+\begin{document}
+
+% paper title
+\title{Learning to Evolve: Multi-modal Interactive Fields for Robust Humanoid Navigation in Dynamic Environments}
+
+% You will get a Paper-ID when submitting a pdf file to the conference system
+\author{Author Names Omitted for Anonymous Review. Paper-ID 256}
+
+\maketitle
+
+\begin{strip}
+    \centering
+    \includegraphics[width=0.95\textwidth]{RSS/images/teaser.jpeg}
+    \captionof{figure}{\textbf{Multi-modal Interactive Fields (MIF) for Robust Humanoid Navigation.} 
+We propose a hierarchical framework composed of three coupled fields: \textbf{(1) Appearance Field:} Provides dense semantic grounding for robust view synthesis. 
+\textbf{(2) Spatial Field:} Maintains a dynamic topological Scene Graph that updates upon object relocation, enabling seamless re-planning from obsolete paths to correct trajectories. 
+\textbf{(3) Geometry Field:} Generates on-the-fly water-tight meshes to ensure Interaction Pose Safety (IPS) before manipulation.}
+    \label{fig:teaser}
+\end{strip}
+
+
+\begin{abstract}
+Achieving safe manipulation-oriented navigation for humanoid robots is fundamentally challenged by two factors: \textbf{locomotion-induced perceptual distortion} (causing semantic-geometry distortion) and \textbf{changes within the environment} (causing map-reality mismatches). Existing static scene graphs often fail under these conditions, leading to interaction failures. To address this, we introduce the \textbf{Multi-modal Interactive Field (MIF)}, a hierarchical framework that transforms the robot from a passive map-user into an \textbf{active knowledge-evolver}.
+MIF constructs three synergistic fields: (i) a denoised \textbf{Appearance Field} utilizing confidence-gated 3D Gaussian Splatting to suppress gait oscillation noise; (ii) a hierarchical \textbf{Spatial Field} for semantic reasoning; and (iii) \textbf{Geometry Field}, leveraging a Flow Matching based generative model to reconstruct high-fidelity meshes for rigorous \textbf{Interaction Pose Safety (IPS)} verification against the target object. Crucially, we propose a closed-loop \textbf{Interaction and Adaptation Mechanism} to adapt to environmental changes. By monitoring a multi-modal discrepancy score $\mathcal{D}$, the system autonomously distinguishes between sensor noise and genuine environmental changes (\emph{e.g.}, relocated objects), triggering a local evolution loop to rectify obsolete memory. Real-world experiments on a \textbf{Unitree-G1 humanoid} demonstrate that MIF significantly outperforms static baselines (HOV-SG), improving the success rate in dynamic relocation scenarios from 12\% to \textbf{94\%}, while reducing semantic memory footprint by 91.4\% via feature distillation.
+\end{abstract}
+
+\begin{keywords}
+Semantic Scene Understanding, Safe Navigation, Humanoid Robots, Active Perception, 3D Gaussian Splatting, 
+\end{keywords}
+
+\IEEEpeerreviewmaketitle
+
+
+
+% \section{INTRODUCTION}
+% \label{sec:introduction}
+
+% % Autonomous navigation and scene understanding are fundamental capabilities for embodied agents performing long-term tasks in complex environments. Recently, the integration of Vision-Language Models (VLMs) has significantly improved the semantic reasoning capabilities of robots. State-of-the-art hierarchical representations, such as HOV-SG, have demonstrated impressive performance in large-scale navigation by indexing floors, rooms, and objects within a unified open-vocabulary graph. However, these approaches primarily establish a \textit{static} scene representation. In real-world scenarios, agents encounter dynamic changes—such as relocated furniture or transient objects—that render static maps obsolete. Furthermore, current systems rely heavily on the zero-shot generalization of Foundation Models, which are prone to hallucinations and lack a mechanism to rectify erroneous memories through physical feedback.
+
+% Autonomous navigation in unstructured, human-centric environments remains a cornerstone of embodied AI, particularly for agents performing long-horizon tasks. % 任务需求
+% While purely reactive or end-to-end learning paradigms have demonstrated efficiency in local obstacle avoidance, they often lack the explicit spatial-semantic reasoning required for complex task planning in large-scale spaces. % 显式推理的意义
+% To bridge the gap between raw perception and symbolic reasoning, structured world representations - specifically hierarchical 3D Scene Graphs (3DSGs) - have emerged as the standard for organizing environmental data. % 分层场景图的意义
+% Frameworks such as HOV-SG represent the state-of-the-art in this domain by utilizing Vision-Language Models (VLMs) to index objects within a unified open-vocabulary graph. % 引出 HOV-SG
+% However, since these hierarchies are typically constructed from a single initial scan, they function as \textit{static} snapshots that cannot accommodate the inherent non-stationarity of real-world deployments. % 分层场景图的局限
+
+% % The limitations of such static hierarchies are exacerbated by an over-reliance on the zero-shot generalization of Foundation Models. % 问题根源：大模型过度的自信 + 从不动态更新
+% % While FMs provide powerful semantic priors, they are fundamentally open-loop observers; in a navigation context, their tendency for \textit{hallucination} manifests as the 'ghosting' of relocated objects or the misidentification of transient occlusions as permanent structures. % 进一步给出具体的解释和案例
+% % Without a mechanism for physical grounding, a robot guided by these stale priors may attempt to interact with non-existent targets or fail to recognize novel task-relevant changes. % 解释具体的失败
+% % To resolve this, we propose Multi-modal Interactive Learning (MIL), a framework that treats Foundation Models as an initial prior to be rectified. % 
+% % By implementing a Perception-Interaction-Learning loop, MIL utilizes interactive feedback—quantified through a \textit{discrepancy score} $\mathcal{D}$—to verify FM predictions and evolve the memory fields into an 'environmental ground truth'. % 技术闭环
+
+% % The limitations of static perception are particularly acute for humanoid platforms like the Unitree-G1. Unlike wheeled robots, humanoids experience significant field-of-view (FOV) oscillations during gait and require higher geometric precision for balance-critical interactions. To bridge the gap between static perception and dynamic interaction, we propose \textbf{Multi-modal Interactive Learning (MIL)}, a framework inspired by the "Perception-Interaction-Learning" paradigm. Unlike the static pipelines in HOV-SG, MIL treats scene memory as an evolving entity updated during task execution. Our approach represents the environment through three interconnected layers, as shown in Fig.~\ref{fig:teaser}:
+% % \begin{enumerate}
+% %     \item \textbf{Appearance Field}: An online 3DGS pipeline embedded with distilled CLIP and DINOv2 features, supporting real-time view synthesis and visual localization.
+% %     \item \textbf{Spatial Field}: A semantic scene graph stored as a textual JSON structure, capturing inter-object spatial relationships for high-level LLM reasoning.
+% %     \item \textbf{Geometry Field}: An on-demand module utilizing Flow Matching to recover high-fidelity mesh and texture for interaction-critical objects.
+% % \end{enumerate}
+
+% The limitations of static perception are particularly acute for humanoid platforms like the Unitree-G1, where perceptual errors directly translate into physical instability. 
+% Unlike wheeled robots, humanoids face a dual challenge: (i) sensor-level instability, where significant field-of-view (FOV) oscillations during gait degrade the quality of real-time mapping; and (ii) interaction-level sensitivity, where balance-critical tasks like reaching or grasping require millimeter-level geometric precision that foundation models cannot guarantee zero-shot. 
+% To bridge the gap between fragile static priors and robust embodied execution, we propose Multi-modal Interactive Learning (MIL). 
+% Rather than treating the environment as a broad "dynamic" entity, MIL decomposes environmental inconsistency into three actionable layers, each addressing a specific failure mode of humanoid autonomy:
+
+% \begin{itemize}
+%     \item \textbf{Appearance Field ($\mathcal{F}_{app}$):} Combines uncertainty-aware 3DGS with distilled features to provide a \textit{view-consistent visual anchor}. This mitigates FOV oscillations by recalling stable, rendered memories for relocalization.
+%     \item \textbf{Spatial Field ($\mathcal{F}_{spat}$):} Uses a hierarchical scene graph to resolve \textit{topological discrepancies}. It enables LLM-driven reasoning to adapt to relocated furniture, ensuring the agent's global plan remains semantically valid.
+%     \item \textbf{Geometry Field ($\mathcal{F}_{geom}$):} Employs Flow Matching to recover \textit{structural ground truth}. It provides the high-fidelity meshes necessary for computing force-closure and collision-free interaction poses, ensuring postural safety during the final approach.
+% \end{itemize}
+
+% % The core innovation of MIL lies in its \textit{interactive learning} loop. During navigation, the agent will check discrepancies between real-time observations and global memory and trigger a verification process where the appearance and geometry fields determine if a change is a physical relocation or a sensor hallucination. By learning from these interactions, the system rectifies foundation model errors and acquires "environmental ground truth," transitioning the robot from a passive map-user to an active knowledge-evolver.
+
+% The core innovation of MIL lies in its \textit{active verification} loop, which transitions the agent from a passive map-user to an evolving knowledge-evolver. 
+% During navigation, the agent continuously monitors the \textit{discrepancy score} $\mathcal{D}$ between real-time local observations and the stored global memory. 
+% Rather than relying on open-loop change detection, MIL triggers a targeted verification process: the appearance and geometry fields are queried from proximal, high-quality viewpoints to determine if a discrepancy arises from a physical environment change (\emph{e.g.}, relocation) or a perceptual hallucination induced by the foundation model's zero-shot priors. 
+% By integrating these interactive observations, the system effectively rectifies misalignments in the initial memory and establishes an environmental ground truth through physical presence. 
+% This mechanism ensures that the Unitree-G1 can autonomously adapt to non-stationary scenes, as evidenced by our experiments where MIL recovered from initial zero-shot failures to achieve a 94\% task success rate.
+
+
+% % The primary contributions of this work are as follows:
+% % \begin{itemize}
+% %     \item We introduce the \textbf{MIL framework}, enabling autonomous memory evolution and error correction through agent-environment interaction.
+% %     \item We present a multi-field representation combining 3DGS, Flow Matching, and LLM-driven graphs to support both low-level stability and high-level reasoning.
+% %     \item We implement a stable navigation system for the \textbf{Unitree-G1 humanoid}  using an enhanced Pure Pursuit algorithm, reducing velocity oscillations by 45\%.
+% %     \item We provide extensive evaluations demonstrating that MIL improves task success rates from \textbf{12\% to 94\%} in dynamic relocation scenarios while reducing semantic memory overhead by \textbf{91.4\%}.
+% % \end{itemize}
+
+% The primary contributions of this work are as follows:
+% \begin{itemize}
+%     \item We introduce the MIL framework, which enables autonomous memory evolution through an \textit{active verification} loop, transforming embodied agents from passive map-users into active knowledge-evolvers.
+%     \item We present a three-layer memory representation: (i) an uncertainty-aware Appearance Field for robust visual anchoring; (ii) a hierarchical Spatial Field utilizing textual scene graphs for semantic reasoning; and (iii) a generative Geometry Field leveraging Flow Matching for on-demand structural reconstruction.
+%     \item We realize a full-stack, closed-loop integration on the Unitree-G1 humanoid, where physical interaction is utilized as a corrective feedback signal to resolve perceptual hallucinations and adapt to environmental non-stationarity.
+%     \item We provide extensive real-world evaluations demonstrating that MIL improves task success rates from 12\% to 94\% in dynamic relocation scenarios while reducing semantic memory overhead by 91.4\%.
+% \end{itemize}
+
+
+% % \section{INTRODUCTION}
+% % \label{sec:introduction}
+
+% % Humans can organize environmental knowledge into hierarchical cognitive maps, integrating multi-modal experiences to facilitate complex reasoning and long-term planning \cite{Werby-RSS-24}. These mental representations are not merely static archives; they are dynamic entities that mature through constant interaction and sensory feedback. In the realm of robotics, the transition from classical simultaneous localization and mapping (SLAM) to language-grounded semantic mapping has enabled agents to index the physical world using open-vocabulary concepts. State-of-the-art frameworks, such as HOV-SG, have further advanced this by abstracting large-scale environments into hierarchical scene graphs. However, these hierarchies typically only function as \textbf{static snapshots}, assuming an immutable environment captured in a single scan. Such an `open-loop' paradigm remains fragile when faced with \textit{dynamic environment} and is prone to the inherent \textbf{hallucinations} of foundation models that lack a mechanism for physical grounding.
+
+% % The limitations of static perception are particularly acute for humanoid platforms such as Unitree-G1. Unlike wheeled robots, humanoids face a dual challenge: (i) \textit{sensor-level instability}, where gait-induced oscillations degrade real-time mapping quality; and (ii) \textit{interaction-level sensitivity}, where balance-critical tasks require millimeter-level precision. For a humanoid, a perceptual hallucination, such as "ghosting" an object that has been relocated—, is not merely a semantic error, but a direct threat to \textbf{pose stability}. When an agent attempts to interact with a target based on stale priors, the resulting misalignment can lead to physical failure. 
+
+% % To bridge the gap between fragile static priors and robust embodied execution, we propose \textbf{Multi-modal Interactive Learning (MIL)}. Our core philosophy is that \textbf{robot memory must be an evolving entity.} MIL transitions the agent from a passive map-user into an \textbf{active knowledge-evolver} by implementing a Perception-Interaction-Learning loop. During navigation, the agent monitors a real-time \textbf{discrepancy score} $\mathcal{D}$ between observations and stored memory. Rather than blindly proceeding, the agent triggers an \textit{Active Verification} phase, utilizing its mobility to acquire proximal viewpoints and grounding its memory in physical presence. 
+
+% % Thereinto, we decompose the whole memory and evolving mechanism into three separate but related layers, each addressing a specific failure mode of humanoid autonomy:
+% % \begin{itemize}
+% %     \item \textbf{Appearance Field ($\mathcal{F}_{app}$):} An uncertainty-aware 3DGS pipeline that provides a \textit{view-consistent visual anchor}, mitigating gait-induced FOV oscillations.
+% %     \item \textbf{Spatial Field ($\mathcal{F}_{spat}$):} A hierarchical scene graph that resolves \textit{topological discrepancies}, enabling LLM-driven reasoning to adapt to relocated structures.
+% %     \item \textbf{Geometry Field ($\mathcal{F}_{geom}$):} An on-demand module utilizing Flow Matching to recover the \textit{structural ground truth} necessary for safe, force-closure interaction.
+% % \end{itemize}
+
+% % As demonstrated in our evaluations, MIL allows Unitree-G1 to autonomously rectify zero-shot hallucinations, improving task success rates from 12\% to 94\% in non-stationary scenarios. Our contributions include: (1) the MIL framework for autonomous memory evolution; (2) a three-layer representation supporting both stability and reasoning; (3) a closed-loop humanoid integration using physical feedback; and (4) extensive real-world validation.
+
+% 长版
+% \section{INTRODUCTION}
+% % WHY SHOULD I CARE & THE PROBLEM
+% Humanoid robots promise seamless integration into human-centric environments due to their anthropomorphic versatility. However, a critical gap remains between high-level linguistic reasoning and physically feasible interaction execution. While approximate navigation is achievable, the primary obstacle to deployment is ensuring the safety and feasibility of the \textbf{terminal interaction pose}---the precise stance required to manipulate objects without collision or instability. Achieving such \textbf{manipulation-oriented navigation tasks} demands robust scene understanding capable of grounding complex semantics into high-fidelity geometry, even amidst the severe perceptual noise and spatio-semantic dynamics inherent to real-world operation.
+
+% Unlike stable wheeled robots, humanoids operate with bipedal dynamics, characterized by high-frequency torso oscillations and abrupt viewpoint shifts. These dynamics fundamentally conflict with State-of-the-Art (SOTA) semantic mapping and navigation frameworks, such as HOV-SG~\cite{Werby-RSS-24} and ConceptGraphs~\cite{gu2024conceptgraphs}, which rely on projecting and fusing discrete 2D semantic features onto 3D point clouds---a pipeline strictly optimized for stable, quasi-static camera trajectories. Consequently, naively adapting these paradigms to humanoid robots fails to guarantee the semantic-geometric accuracy required for task success. This limitation manifests as two critical challenges:
+
+% \begin{itemize}
+%     \item \textbf{P1: Locomotion-Induced Semantic Misalignment.} Humanoid walking generates high-frequency camera jitter and motion blur, fundamentally violating the stable-pose assumptions of SOTA baselines. In existing pipelines~\cite{Werby-RSS-24, gu2024conceptgraphs} that merge 2D semantic segments into 3D point clouds, this instability causes severe misalignment during projection. The resulting maps suffer from semantic ``smearing'' and spatial artifacts, rendering them unreliable for precision-critical manipulation-oriented navigation.
+    
+%     \item \textbf{P2: Spatio-Semantic Obsolescence.} Real-world human-centered environments are topologically fluid, characterized by frequent object displacements and layout reconfigurations. Current frameworks, however, typically enforce a rigid static-world assumption, lacking mechanisms to selectively update scene representations. This leads to a map-reality mismatch, where the robot operates on outdated spatial memory, risking failure without computationally prohibitive global re-mapping.
+% \end{itemize}
+
+% To address these challenges, we propose the \textbf{Multi-modal Interaction Field (MIF)}. To resolve \textbf{P1}, MIF utilizes a continuous probabilistic scene representation. Unlike approaches~\cite{Werby-RSS-24, gu2024conceptgraphs} that bake in sensor noise, our Simultaneous Localization and Mapping (SLAM) framework based on Semantic 3D Gaussian Splatting (3DGS) treats observations as optimizable primitives. By integrating multi-view constraints, the system statistically suppresses transient jitter and motion blur, converging to a coherent semantic field. This enables two critical capabilities:
+
+% \begin{itemize}
+%     \item \textbf{Lightweight Denoised Semantic Reasoning:} Addressing the prohibitive memory costs of dense feature embeddings, we achieve a \textbf{91\% reduction in memory footprint} while maintaining segmentation accuracy. From this compact field, we render stabilized, high-resolution views that enable the Vision Language Model (VLM) to construct a robust semantic scene graph with more accurate object anchor and spatial relationships.
+    
+%     \item \textbf{Geometric High-fidelity Geometry:} Standard 3DGS representations suffer from locomotion-exacerbated geometric inconsistencies. Specifically, the inherent discrepancy between rendered depth and surface normals~\cite{Huang2DGS2024} is amplified by motion blur, causing surfaces to appear ``cloud-like'' and structurally ambiguous. This prevents the computation of a precise \textbf{Terminal Interaction Pose}---the exact stance required to initiate manipulation at the end of navigation process. To bridge this gap, we employ a Flow Matching-based model to rectify these sparse volumetric priors into precise object boundaries. This ensures the robot can determine a feasible standing position for manipulation, a requirement that demands far higher geometric fidelity than simple collision-free navigation.
+% \end{itemize}
+
+% To resolve \textbf{P2}, we move beyond static one-session mapping to adopt a closed-loop \textbf{Interaction Learning Mechanism}. Crucially, leveraging the uncertainty-aware representation established in P1, this mechanism filters out transient locomotion noise to prevent false-positive updates. Instead of passive re-scanning, the module continuously monitors a multi-modal \textbf{discrepancy score $D$} that synthesizes perceptual confidence, semantic alignment, and topological consistency. This allows the system to robustly distinguish actual environmental shifts from locomotion-induced visual artifacts. A sustained surge in $D$ signals a genuine map-reality mismatch, triggering a selective update of the MIF, enabling the robot to autonomously adapt to evolving environments during long-term deployment.
+
+% By integrating these modules into a humanoid navigation system, the primary contributions of this work are as follows:
+
+% \begin{itemize}
+%     \item We introduce the \textbf{Multi-modal Interaction Field (MIF)}, a hierarchical scene representation that fuses incremental semantic 3DGS with VLM reasoning. By filtering locomotion-induced noise, it provides a robust spatio-semantic foundation specifically tailored for humanoid perception.
+
+%     \item We propose a closed-loop \textbf{Interaction Learning Mechanism} that dynamically detects map-reality mismatches via a discrepancy score $D$. This enables the robot to autonomously self-correct obsolete memories and adapt to environmental changes without global re-mapping.
+
+%     \item We define \textbf{Interaction Pose Safety (IPS)} as a rigorous success criterion, shifting the navigation paradigm from a simple ``arrival'' task to ensuring the geometric feasibility and safety of the terminal pose for subsequent manipulation.
+
+%     \item We validate a fully integrated system on a \textbf{Unitree G1 humanoid} in a dynamic $100~\text{m}^2$ real-world environment. Focusing on \textbf{manipulation-oriented navigation tasks driven by complex language queries}, our experiments with over 100 objects demonstrate that our approach significantly outperforms SOTA baselines in both instruction following and interaction safety.
+% \end{itemize}
+
+
+
+\section{Introduction}
+
+Humanoid robots promise seamless integration into human-centric environments due to their anthropomorphic versatility. However, a critical gap remains between high-level linguistic reasoning and physically feasible interaction execution. Although approximate navigation is achievable, the main obstacle is ensuring the safety and feasibility of the final interaction pose: the precise stance and body configuration required to manipulate objects without collision or instability. Achieving this requires robust scene understanding capable of grounding complex semantics into high-fidelity geometry, despite severe perceptual noise and environmental changes inherent to real-world operation.
+
+% Unlike stable wheeled robots, humanoids operate with bipedal dynamics, characterized by high-frequency torso oscillations and abrupt viewpoint shifts. These dynamics fundamentally conflict with State-of-the-Art (SOTA) semantic mapping frameworks (\emph{e.g.}, HOV-SG \cite{Werby-RSS-24}, ConceptGraphs \cite{gu2024conceptgraphs}), which strictly rely on stable, quasi-static camera trajectories. Consequently, naively adapting these paradigms to humanoid robots fails due to two critical challenges:
+
+Unlike stable wheeled robots, humanoids operate with bipedal dynamics, characterized by high-frequency torso oscillations and abrupt viewpoint shifts~\cite{stasse2006real, kajita20013d}. These dynamics fundamentally conflict with the State-of-the-Art (SOTA) semantic mapping frameworks, \emph{e.g.}, HOV-SG \cite{Werby-RSS-24} and ConceptGraphs \cite{gu2024conceptgraphs}, which strictly rely on stable and quasi-static camera trajectories. Furthermore, while these frameworks typically assume a static environment, real-world navigation and manipulation require precise and safe interaction with a constantly evolving world. Consequently, naively adapting these paradigms fails due to two critical challenges:
+
+% \begin{itemize}
+%     \item \textbf{P1: Semantic-Geometric Distortion from Camera Shaking.} 
+%     Humanoid walking generates high-frequency jitter. This instability breaks the standard mapping process, causing two simultaneous failures: \textit{semantic misalignment} (labels drift off the actual object) and \textit{geometric noise} (object boundaries become fuzzy and cloud-like). This ``double distortion'' renders the map unreliable: the robot may roughly recognize an object but cannot determine its precise physical surface to calculate a feasible manipulation pose.
+    
+%     \item \textbf{P2: Map-Reality Mismatch due to Environmental Changes.} 
+%     Real-world layouts are topologically fluid (\emph{e.g.}, objects are frequently moved), yet current frameworks typically enforce a rigid static-world assumption. This creates a critical conflict: the robot relies on outdated spatial memory, planning actions for an object at its \textit{old} location. This leads to inevitable operation failure or collision, as the robot is unaware that the environment has evolved.
+% \end{itemize}
+
+\begin{itemize}
+    \item \textbf{P1: Semantic-Geometric Distortion from Perceptual Noise.} 
+    The motion of humanoid robots can generate high-frequency camera jitter. This instability breaks standard mapping pipelines, causing \textit{semantic smearing} and \textit{geometric noise}. The resulting map is visually ambiguous, making it impossible to determine the precise object surface needed to calculate the safe and feasible Terminal Interaction Pose.
+    
+    \item \textbf{P2: Map-Reality Mismatch due to Environmental Changes.} 
+    Real-world layouts are topologically fluid, \emph{e.g.,} objects are frequently moved, yet current frameworks enforce a rigid static-world assumption. This creates a dangerous \textit{Map-Reality Mismatch}: the robot calculates an interaction pose based on outdated spatial memory, attempting to manipulate a ``phantom'' object at its old location. For a humanoid robot, this is not merely a navigation error but a physical safety hazard, risking collision or loss of balance.
+\end{itemize}
+
+Therefore, as shown in Fig.~\ref{fig:teaser}, we propose the Multi-modal Interactive Field (MIF). To resolve P1, MIF utilizes a continuous probabilistic scene representation based on Semantic 3D Gaussian Splatting (3DGS)~\cite{kerbl20233d}. By integrating multi-view constraints, the system statistically suppresses transient jitter to converge to a coherent semantic field. Crucially, to fix the geometric ambiguity caused by motion blur, we employ an efficient Flow Matching-based model~\cite{chen2025sam, lipman2022flow}. This model allows us to reconstruct high-fidelity object boundaries on demand from sparse volumetric priors, ensuring the robot targets concrete surfaces rather than noisy density fields for manipulation.
+
+To resolve P2, we move beyond static mapping to adopt a closed-loop Interaction Adaptation Mechanism. Instead of passive re-scanning, this module continuously monitors a multi-modal discrepancy score $D$ between the memory and current observation. Taking into account both perceptual confidence and semantic consistency, the system robustly distinguishes actual environment changes from locomotion noise. A persistent surge in $D$ signals a genuine map-reality mismatch, triggering a selective update of the MIF. This enables the robot to autonomously self-correct obsolete memories without computationally prohibitive global re-mapping.
+
+As shown in Fig.~\ref{fig:teaser}, by integrating these modules, the primary contributions of this work are as follows:
+
+\begin{itemize}
+    \item We introduce the Multi-modal Interactive Field (MIF), a hierarchical representation that fuses incremental semantic 3DGS with Vision-Language Model (VLM) based reasoning. By filtering locomotion-induced distortion, it provides a robust spatio-semantic foundation tailored for humanoid perception.
+    
+    \item We propose a closed-loop Interaction Learning Mechanism that detects map obsolescence using a discrepancy score $D$. This enables the robot to autonomously adapt to environmental changes, preventing failures caused by outdated spatial memory.
+    
+    \item We define Interaction Pose Safety (IPS) as a rigorous success criterion, shifting the navigation paradigm from simple ``arrival'' to ensuring the feasibility and safety of the terminal pose for subsequent manipulation.
+    
+    \item We validate a fully integrated system on a Unitree G1 humanoid. Experiments demonstrate that our approach significantly outperforms SOTA baselines in dynamic real-world environments, boosting the success rate of manipulation-oriented navigation from 12\% to 94\%.
+\end{itemize}
+
+\section{RELATED WORK}
+\label{sec:related_work}
+
+\subsection{Semantic 3D Scene Representations}
+The emergence of Neural Radiance Fields (NeRF) \cite{mildenhall2021nerf} and Instant NGP \cite{muller2022instant} has fundamentally changed 3D scene modeling. Recently, 3D Gaussian Splatting (3DGS) \cite{kerbl20233d} has gained prominence due to its explicit representation and real-time rendering capabilities. To endow these structures with semantic meaning, many frameworks~\cite{kerr2023lerf, kirillov2023segment, peng2023openscene, shi2024language, kobayashi2022decomposing, engelmann2024opennerf, gadre2023cows} choose to integrate Vision Foundation Model~\cite{kirillov2023segment, radford2021learning, oquab2024dinov2} into 3D fields. Recent extensions like Gaussian Grouping \cite{gaussian_grouping} and Feature Splatting \cite{qiu2024featuresplatting} distill high-dimensional features into Gaussian primitives for object-centric editing. However, these methods typically assume smooth camera trajectories and quasi-static scenes. When applied to humanoid platforms, the inherent locomotion jitter causes severe semantic smearing and high VRAM consumption. Our MIL framework addresses these by implementing a confidence-gated distillation strategy that filters gait-induced noise (P1), reducing the semantic memory footprint by 91.4\% while maintaining robust segmentation.
+
+\subsection{3D Scene Graphs and Hierarchical Mapping}
+3D Scene Graphs (3DSGs) provide a structured abstraction by organizing environmental data into a hierarchy of floors, rooms, and objects \cite{armeni20193d, Werby-RSS-24, wu2021scenegraphfusion, wald2020learning, bavle2022situational}. Early works such as Kimera-Semantics \cite{rosinol20203d} focused on geometric-semantic consistency, while Hydra \cite{hughes2022hydra} introduced real-time spatial perception. With the advent of Large Language Models (LLMs)~\cite{hurst2024gpt}, some frameworks~\cite{pmlr-v270-xu25b, Werby-RSS-24, rana2023sayplan, chalvatzaki2023learning, ni2024grid, yin2024sg} leverage symbolic reasoning for complex tasks. Nevertheless, these representations typically enforce a ``map-once-query-forever'' paradigm, failing to accommodate dynamic environmental rearrangements (P2). Furthermore, they often represent objects as abstract nodes or coarse bounding boxes, lacking the high-fidelity surface information required for contact-rich humanoid interaction. MIL mitigates this by bridging the topological graph with an active geometry generation module.
+
+\subsection{Generative Geometry for Embodied AI}
+Robotic interaction requires precise geometric priors, especially when dealing with partial observations. Direct mesh generation with learning-based methods~\cite{chen2020bsp, dai2019scan2mesh, groueix2018papier, nash2020polygen} has been researched for years. Recently, generative models, including Diffusion-based~\cite{ho2020denoising} and Flow Matching-based~\cite{lipman2023flow} reconstruction, have shown exceptional performance in recovering 3D meshes from sparse data. Recent studies like MeshGPT \cite{siddiqui2024meshgpt} and SAM-3D \cite{chen2025sam} explore object-centric completion to support manipulation. However, these generative priors are typically applied as offline post-processing steps rather than as an integral part of a real-time navigation loop. MIL incorporates a Flow Matching-based Geometry Field that generates high-fidelity structures \textit{on-demand} during the approach phase, refining them through interactive feedback to verify Interaction Pose Safety (IPS).
+
+\subsection{Active Perception and Interactive Learning}
+Interactive perception \cite{bohg2017interactive} posits that an agent's actions can resolve perceptual ambiguities. This theory has evolved from low-level active SLAM \cite{bajcsy1988active, zhao2022perception, xu2021invariant, kim2013perception, chaplot2020learning} to high-level semantic based exploration~\cite{yokoyama2024vlfm, zhu2025move, chen2023not, chaplot2020object}. Although modern foundation models provide powerful zero-shot priors, they remain prone to hallucinations in novel environments~\cite{chang2024goat, chen2023not}. Recent works emphasize ``closing the loop'' through physical feedback, yet often overlook humanoid-specific constraints such as FOV oscillations caused by locomotion. Unlike standard active exploration, which aims to maximize coverage, our Interaction and Adaptation Mechanism is discrepancy-driven, specifically targeting the resolution of map-reality conflicts. This transitions the humanoid from a passive map-user to an active \textit{knowledge-evolver}.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.95\textwidth]{RSS/images/RSS_PIPELINE2.png}
+    \caption{\textbf{Overview of the Multi-modal Interactive Fields (MIF) framework.} \textbf{(Red)} Incremental Appearance Field: Constructs a dense semantic base by fusing 3DGS SLAM~\cite{yan2023gs} with multi-modal features~\cite{oquab2024dinov2, radford2021learning} to generate confidence-aware maps. \textbf{(Blue)} Spatial Field: Abstracts the dense map into a topological Scene Graph, utilizing VLMs~\cite{hurst2024gpt} to reason over object relationships from synthesized views. \textbf{(Green)} Geometry Field: Recovers high-fidelity meshes for interaction. It employs a Task-Driven View Selection strategy to condition a Flow-matching Transformer~\cite{chen2025sam} for precise geometric generation.}
+    \label{fig:overview}
+\end{figure*}
+
+\section{METHODOLOGY}
+\label{sec:methodology}
+
+We propose the \textbf{Multi-modal Interactive Field (MIF)}, a hierarchical representation $\mathcal{M} = \{ \mathcal{F}_{app}, \mathcal{F}_{spat}, \mathcal{F}_{geom} \}$ designed to enable safe humanoid manipulation-oriented navigation from ego-centric RGB-D observations.  Unlike static mapping approaches, MIF is architected to resolve \textit{locomotion-induced distortion} (P1) and \textit{map-reality mismatches} (P2) by grounding linguistic queries into actionable, high-fidelity geometry. The MIF construction pipeline is shown in Fig.~\ref{fig:overview}.
+
+The pipeline operates as a persistent perception-adaptation loop. In the following sections, we detail:
+(i) the construction of the denoised \textbf{Appearance Field} $\mathcal{F}_{app}$ via jitter-aware 3DGS (Sec.~\ref{sec:appearance_field});
+(ii) the abstraction of the \textbf{Spatial Field} $\mathcal{F}_{spat}$ for semantic grounding and mismatch detection (Sec.~\ref{sec:spatial_field}); and
+(iii) the on-demand generation of the \textbf{Geometry Field} $\mathcal{F}_{geom}$ for \textbf{Interaction Pose Safety} verification (Sec.~\ref{sec:geometry_field}).
+
+
+
+% \subsection{Appearance Field Construction ($\mathcal{F}_{app}$)}
+
+\subsection{Appearance Field Construction ($\mathcal{F}_{app}$)}
+\label{sec:appearance_field}
+
+The Appearance Field $\mathcal{F}_{app}$ serves as the primary layer of the MIF. Unlike standard reconstruction pipelines, $\mathcal{F}_{app}$ is explicitly architected to mitigate the Semantic-Geometric Distortion (P1) inherent in bipedal dynamics. By strictly filtering inconsistent observations from high-frequency torso oscillations, it converts shaky raw sensor streams into a coherent, view-consistent semantic radiance field. 
+
+We represent the field as a collection of 3D Gaussian primitives $\mathcal{G} = \{G_i\}$. Crucially, each primitive is augmented with a learnable confidence scalar $C_i \in [0, 1]$, which acts as a reliability gate to suppress locomotion-induced noise.
+
+\subsubsection{Jitter-Aware Confidence Estimation}
+To statistically filter transient artifacts, \emph{e.g.}, motion blur, we introduce a differentiable confidence module. Based on the assumption that primitives generated from unstable poses exhibit high gradient variances, we derive $C_i$ from two normalized signals: the weighted gradient magnitude $g_{n,i}$ (indicating geometric conflict) and the opacity $\alpha_{n,i}$ (indicating structural density).
+
+The confidence $C_i$ is computed through a smooth gating mechanism designed to penalize instability:
+\begin{equation}
+    C_i = \exp(-\beta g_{n,i}) + (1 - \exp(-\beta g_{n,i})) \cdot \sigma(\gamma \alpha_{n,i}(1 - g_{n,i})) \label{eq:confidence},
+\end{equation}
+where $\beta$ and $\gamma$ control the aggressiveness of the suppression. This mechanism effectively down-weights ``ghosting'' artifacts, ensuring the field converges to a coherent semantic distribution despite severe camera jitter.
+
+\subsubsection{Open-Vocabulary Feature Distillation}
+To enable real-time semantic querying, we distill high-dimensional features from foundation models~\cite{oquab2024dinov2, radford2021learning} into a compact 32-dimensional latent space $\mathbf{f}_i^{distill} \in \mathbf{R}^{32}$.  This compression significantly reduces the memory footprint (see Sec.~\ref{sec:exp_performance}), enabling the onboard storage of large-scale semantic maps.
+
+A co-trained MLP decoder projects these latent features back to the original CLIP/DINOv2~\cite{radford2021learning, oquab2024dinov2} space. The rendering process follows standard alpha-blending but is rigorously weighted by our confidence metric:
+\begin{equation}
+    \mathbf{F}^{distill}(\mathbf{p}) = \sum_{i \in \mathcal{N}} C_i \mathbf{f}_i^{distill} \alpha_i T_i, \quad \text{where } T_i = \prod_{j=1}^{i-1} (1 - C_j \alpha_j). \label{eq:rendering}
+\end{equation}
+Crucially, by coupling the accumulation of features with $C_i$, we actively prevent semantic smearing (P1), ensuring that semantic labels are anchored only to stable areas.
+
+\vspace{1mm}
+\noindent \textbf{Stabilized View Synthesis.} 
+Once optimized, $\mathcal{F}_{app}$ functions as a denoised rendering engine. Instead of feeding raw, shaky camera frames to the VLM~\cite{chen2025sam, hurst2024gpt}, we render synthetically stabilized views $I_{stable}$ from smoothed virtual trajectories. These clean inputs effectively bypass locomotion jitter, providing high-fidelity context for the subsequent Spatial Field construction.
+
+\subsection{Spatial Field Construction ($\mathcal{F}_{spat}$)}
+\label{sec:spatial_field}
+
+The Spatial Field $\mathcal{F}_{spat}$ acts as the topological reasoning layer of MIF. While $\mathcal{F}_{app}$ ensures pixel-level consistency, $\mathcal{F}_{spat}$ abstracts the scene into a hierarchical graph $\mathcal{M}_{spat} = (\mathcal{V}, \mathcal{E})$ for high-level task reasoning. Its function is twofold: (1) grounding linguistic concepts into physical space using denoised evidence, and (2) actively detecting Map-Reality Mismatches (P2) based on topological consistency.
+
+% \subsubsection{Graph Generation via Stabilized Re-perception}
+% Direct VLM inference on raw humanoid camera streams suffers from severe segmentation jitter. We instead employ a Stabilized Re-perception strategy. We query the optimized $\mathcal{F}_{app}$ to render high-resolution, de-blurred views $\{I_{stable}^k\}$.  These synthetic inputs bypass locomotion-induced blur, enabling the VLM to extract object entities with high precision.
+
+% Formally, each node $v_i \in \mathcal{V}$ is a tuple $v_i = \{ \mathcal{S}_i, \mathbf{c}_i, \Omega_i, \mathcal{A}_i \}$, comprising the semantic caption $\mathcal{S}_i$, room affiliation $\mathcal{A}_i$, and the 3D centroid $\mathbf{c}_i$ computed via weighted back-projection:
+% \begin{equation}
+%     \mathbf{c}_i = \frac{\sum_{j \in \mathcal{N}_i} C_j \alpha_j \mathbf{x}_j}{\sum_{j \in \mathcal{N}_i} C_j \alpha_j}. \label{eq:grounding}
+% \end{equation}
+% We introduce a Node-Level Reliability Score $\Omega_i = \langle C_j \rangle_{j \in \mathcal{N}_i}$. This score acts as a physical existence filter: ``phantom'' artifacts from VLM hallucinations map to low-confidence primitives ($C_j \approx 0$), resulting in low $\Omega_i$, thereby suppressing semantic noise at the topological level.
+
+\subsubsection{Graph Generation via Stabilized Re-perception}
+Direct VLM~\cite{chen2025sam, redmon2016you} inference on raw humanoid camera streams suffers from severe segmentation jitter. We instead employ a stabilized re-perception strategy. We query the optimized $\mathcal{F}_{app}$ to render high-resolution, de-blurred views $\{I_{stable}^k\}$. These synthetic inputs bypass locomotion-induced blur, enabling the VLM~\cite{chen2025sam, redmon2016you} to extract object entities with high precision.
+
+Formally, each node $v_i \in \mathcal{V}$ is a tuple $v_i = \{ \mathcal{S}_i, \mathbf{c}_i, \Omega_i, \mathcal{A}_i \}$, comprising the semantic caption $\mathcal{S}_i$, room affiliation $\mathcal{A}_i$, and the 3D centroid $\mathbf{c}_i$ computed via weighted back-projection:
+\begin{equation}
+    \mathbf{c}_i = \frac{\sum_{j \in \mathcal{N}_i} C_j \alpha_j \mathbf{x}_j}{\sum_{j \in \mathcal{N}_i} C_j \alpha_j} \label{eq:grounding} ,
+\end{equation}
+where $\mathbf{x}_j$ denotes the spatial position (mean) of the $j$-th Gaussian primitive.
+
+We introduce a node-level reliability score $\Omega_i = \langle C_j \rangle_{j \in \mathcal{N}_i}$, where the operator $\langle \cdot \rangle$ denotes the arithmetic mean. It acts as a physical existence filter: since ``phantom'' artifacts arising from VLM hallucinations typically project onto low-confidence primitives ($C_j \approx 0$), they yield a minimal $\Omega_i$, effectively suppressing semantic noise at the topological level.
+
+
+\subsubsection{Detecting Map-Reality Mismatch via Discrepancy $\mathcal{D}$}
+To resolve \textbf{P2}, the system must distinguish robustly between sensor noise and environmental changes. We implement a closed-loop Interaction and Adaptation Mechanism monitoring a multi-modal Discrepancy Score $\mathcal{D}$.
+
+The agent compares a live local subgraph $\mathcal{M}_{loc}$ against the global $\mathcal{M}_{spat}$. The node-level discrepancy $\delta_i$ is defined as:
+\begin{equation}
+    \delta_i = \Omega_i \cdot \left( w_{pos} \|\mathbf{c}_i^{loc} - \mathbf{c}_j^{glob}\|_2 + w_{sem} (1 - \cos(\hat{\mathbf{f}}_i, \hat{\mathbf{f}}_j)) \right). \label{eq:delta_calc}
+\end{equation}
+Crucially, $\delta_i$ is gated by reliability $\Omega_i$. This ensures that discrepancy alerts are triggered \textit{only} by nodes composed of highly confident observations, preventing false positives caused by motion blur (P1).
+
+The total discrepancy $\mathcal{D}$ aggregates node shifts and topological violations:
+\begin{equation}
+    \mathcal{D} = \frac{1}{|\mathcal{V}_{loc}|} \sum_{i \in \mathcal{V}_{loc}} \delta_i + w_{rel} \frac{|\mathcal{E}_{loc} \Delta \mathcal{E}_{spat}|}{|\mathcal{E}_{loc} \cup \mathcal{E}_{spat}|}. \label{eq:total_discrepancy}
+\end{equation}
+Here, the second term quantifies the structural divergence using the Jaccard distance on the edge sets. The operator $\Delta$ denotes the symmetric difference, capturing semantic relationships that have either vanished (\emph{e.g.}, a cup removed from a table) or newly appeared, relative to the prior memory.
+
+A surge in $\mathcal{D} > \tau_{replan}$ signals a Map-Reality Mismatch. This triggers a spatially selective update loop: the system accumulates multi-view evidence to rectify \textit{only} the inconsistent local region, leaving the global stable memory intact. This strategy ensures efficient synchronization with the dynamic environment without incurring the cost of global re-mapping.
+% The Geometry Field $\mathcal{F}_{geom}$ provides high-fidelity, actionable structural representations (\emph{e.g.}, meshes and high-resolution textures) to support precise interaction. Unlike the holistic Appearance Field, $\mathcal{F}_{geom}$ focuses on object-centric reconstruction to provide the geometric grounding necessary for safe humanoid maneuvering and interactive pose estimation.
+% \subsection{Geometry Field Construction ($\mathcal{F}_{geom}$)}
+% \label{sec:geometry_field}
+
+% The Geometry Field $\mathcal{F}_{geom}$ serves as the physical interaction interface of MIF. While $\mathcal{F}_{app}$ and $\mathcal{F}_{spat}$ enable semantic reasoning, their implicit representations (Gaussian splats) lack precision for contact-rich tasks. Safe humanoid manipulation requires explicit and watertight manifolds.
+
+% To bridge this gap, $\mathcal{F}_{geom}$ functions as an on-demand Geometric High-fidelity Geometry module. It transforms noise-filtered primitives from $\mathcal{F}_{app}$ into high-fidelity meshes, enabling rigorous computation of Interaction Pose Safety (IPS).
+
+% \subsubsection{Task-Driven Informative View Selection}
+% Before interaction, the agent employs an active view selection strategy to condition the generative model, prioritizing regions with high structural confidence. We rank candidate viewpoints $\mathcal{K}$ using a utility function $Q(k)$:
+% \begin{equation}
+%     Q(k) = \exp( -\| \mathbf{c}_i - \mathbf{p}_k \|_2^2 / 2\sigma_d^2 ) \cdot (\mathbf{d}_k \cdot \mathbf{v}_{ik})^\gamma \cdot \frac{1}{|\mathcal{N}_i|} \sum_{j \in \mathcal{N}_i} \Omega_j .
+% \end{equation}
+% The third term explicitly leverages the reliability score $\Omega_j$ (from Sec.~\ref{sec:spatial_field}). This ensures the generative process is grounded in stable physical evidence filtered of locomotion artifacts, preventing the amplification of transient noise.
+
+% \subsubsection{Generative Surface Recovery via Flow Matching}
+% To infer unobserved contact surfaces (,\emph{e.g.}, back side of the object), we employ a Flow Matching-based Generative model. We formalize geometric recovery as a conditional generation problem, learning a time-dependent vector field $v_t$ that transports a Gaussian noise distribution $p_0$ to the complete mesh distribution $p_1$:
+% \begin{equation}
+%     \mathcal{L}_{FM} = \mathbf{E}_{t, x_0, x_1} \left[ \|v_t(x_t) - (x_1 - (1 - \sigma_{min})x_0)\|^2 \right] .
+% \end{equation}
+% Conditioned on high-confidence views from $\mathcal{F}_{app}$, the model recovers a watertight mesh consistent with the object category but geometrically faithful to the specific instance, providing the collision model necessary for interaction planning.
+
+% \subsubsection{Asynchronous Grounding and IPS Definition}
+% To compensate for the inference latency ($\approx$ 3s) of the model, we implement an asynchronous grounding process. The synthesized mesh is aligned to the sparse Gaussian cloud via scale-invariant ICP:
+% \begin{equation}
+%     \min_{\mathbf{R}, \mathbf{t}, s} \sum_{m=1}^M \rho \left( \|s \mathbf{R} \mathbf{x}_{gen}^m + \mathbf{t} - \mathbf{x}_{app}^{NN}\| \right)
+% \end{equation} .
+% This registered mesh $\mathcal{M}_{gen}$ underpins our Interaction Pose Safety (IPS) check.
+
+% \vspace{1mm}
+% \noindent \textbf{Formal Definition of IPS.}
+% We define the IPS score $S_{IPS}(\mathbf{p}_{se3})$ for a candidate standing pose $\mathbf{p}_{se3}$ as a boolean validity check:
+% \begin{equation}
+%     S_{IPS} = \mathbf{I}_{col}(\mathbf{p}_{se3}, \mathcal{M}_{gen}) \land \mathbf{I}_{ik}(\mathbf{p}_{se3}, \mathbf{t}_{obj}) \land \mathbf{I}_{stab}(\mathbf{p}_{se3}), 
+% \end{equation}
+% where:
+% \begin{itemize}
+%     \item $\mathbf{I}_{col}$: Returns 1 if the signed distance to $\mathcal{M}_{gen}$ exceeds $\delta_{safe}$ ($5cm$).
+%     \item $\mathbf{I}_{ik}$: Returns 1 if a collision-free IK solution exists for the grasp center $\mathbf{t}_{obj}$.
+%     \item $\mathbf{I}_{stab}$: Returns 1 if the projected Center of Mass (CoM) lies strictly within the support polygon $\mathcal{P}_{sup}$.
+% \end{itemize}
+% Unlike baselines that define arrival via 2D radius, our system considers a navigation task successful \textit{only if} $S_{IPS} = 1$ at the terminal state. This constraint strictly enforces both geometric fidelity (resolving P1) and physical feasibility (addressing P2).
+
+
+\subsection{Geometry Field Construction ($\mathcal{F}_{geom}$)}
+\label{sec:geometry_field}
+
+The Geometry Field $\mathcal{F}_{geom}$ serves as the physical interaction interface of MIF. Although $\mathcal{F}_{app}$ and $\mathcal{F}_{spat}$ enable semantic reasoning, their sparsity lacks precision in estimating the best poses for contact-rich tasks. Safe humanoid manipulation requires explicit and watertight manifolds. To bridge this gap, $\mathcal{F}_{geom}$ functions as an on-demand module, transforming sparse primitives into high-fidelity meshes to enable rigorous computation of Interaction Pose Safety (IPS).
+
+\subsubsection{Task-Driven Informative View Selection}
+To resolve geometric ambiguity before interaction, the agent employs an Active Gaze Strategy. This process involves selecting optimal viewpoints $\mathcal{K}$ to condition the generative reconstruction model, aiming to maximize the information gain regarding the object's interaction surfaces. We rank candidate viewpoints using a utility function $Q(k)$:
+\begin{equation}
+    Q(k) = \exp( -\| \mathbf{c}_i - \mathbf{p}_k \|_2^2 / 2\sigma_d^2 ) \cdot (\mathbf{d}_k \cdot \mathbf{v}_{ik})^\gamma \cdot \frac{1}{|\mathcal{N}_i|} \sum_{j \in \mathcal{N}_i} \Omega_j, \label{eq:qk}
+\end{equation}
+where $\mathbf{d}_k$ denotes the optical axis orientation of the candidate camera pose, and $\mathbf{v}_{ik} = (\mathbf{c}_i - \mathbf{p}_k) / \|\mathbf{c}_i - \mathbf{p}_k\|_2$ is the normalized view vector pointing from the camera center $\mathbf{p}_k$ to the object centroid $\mathbf{c}_i$.
+
+The term $(\mathbf{d}_k \cdot \mathbf{v}_{ik})^\gamma$ enforces a foveal bias, penalizing peripheral observations to minimize lens distortion. By prioritizing poses $\mathbf{p}_k$ that align with stable geometric anchors (high $\Omega_j$), the system ensures that the generative model receives the most ``geometric-rich'' 2D priors. This allows the mesh $\mathcal{M}_{gen}$ to be strictly accurate in regions critical to the intended manipulation, effectively linking active perception to interaction feasibility.
+
+\subsubsection{Conditional Flow Matching for 3D Mesh Recovery}
+To infer unobserved contact surfaces (\emph{e.g.}, the occluded back side), we employ a Flow Matching-based~\cite{lipman2022flow} model~\cite{chen2025sam}. We formalize geometric recovery as a conditional generation problem. Specifically, we learn a time-dependent vector field $v_t$ that transports a Gaussian noise distribution to the target mesh distribution. 
+
+Crucially, this generation is conditioned on the optimal view $I_{best}$ selected by our Active Gaze Strategy ($Q(k)$). By injecting this high-confidence visual prior into the vector field, the model recovers instance-specific structures consistent with the denoised observations from $\mathcal{F}_{app}$, providing the watertight manifold required for the IPS check.
+
+\subsubsection{Asynchronous Grounding and IPS Verification}
+
+To compensate for the latency of the generative model ($\approx$ 3s), we implement an asynchronous grounding pipeline. While the robot navigates toward the target using the $Q(k)$-guided trajectory, the mesh is synthesized and aligned to the sparse Gaussian cloud via scale-invariant ICP:
+\begin{equation}
+    \min_{\mathbf{R}, \mathbf{t}, s} \sum_{m=1}^M \rho \left( \|s \mathbf{R} \mathbf{x}_{gen}^m + \mathbf{t} - \mathbf{x}_{app}^{NN}\| \right) .
+\end{equation}
+The resulting registered mesh $\mathcal{M}_{gen}$ provides the dense geometry to validate the final standing pose $\mathbf{p}_{se3}$. 
+
+\vspace{1mm}
+\noindent \textbf{Formal Definition of IPS.}
+The IPS score $S_{IPS}(\mathbf{p}_{se3})$ serves as the ultimate gate for interaction, ensuring the terminal pose is grounded in the super-resolved reality:
+\begin{equation}
+    S_{IPS} = \mathbf{I}_{col}(\mathbf{p}_{se3}, \mathcal{M}_{gen}) \land \mathbf{I}_{ik}(\mathbf{p}_{se3}, \mathbf{t}_{obj}) \land \mathbf{I}_{stab}(\mathbf{p}_{se3}) ,
+\end{equation}
+where:
+\begin{itemize}
+    \item $\mathbf{I}_{col}$ (\textbf{Geometric Safety}): Evaluates the signed distance to the high-fidelity mesh $\mathcal{M}_{gen}$, ensuring a collision-free margin $\delta_{safe}$.
+    \item $\mathbf{I}_{ik}$ (\textbf{Kinematic Reachability}): Returns 1 if a valid collision-free Inverse Kinematics solution exists for the end-effector to reach the target grasp center $\mathbf{t}_{obj}$.
+    \item $\mathbf{I}_{stab}$ (\textbf{Dynamic Stability}): Returns 1 if the projected Center of Mass (CoM) of the robot lies strictly within the support polygon $\mathcal{P}_{sup}$, defined as the convex hull of the contact area of the feet at pose $\mathbf{p}_{se3}$.
+\end{itemize}
+This ensures that the robot does not just arrive at a coordinate next to the target, but achieves a configuration that is safe and feasible for the following manipulation task despite perceptual noise (P1) and environmental changes (P2).
+
+
+\subsection{Language-Conditioned Navigation and Adaptation}
+\label{sec:navigation}
+
+The final stage utilizes MIF to generate embodied actions. Using the hierarchical structure of MIF, our system ensures that navigation targets are semantically correct, geometrically feasible, and self-correcting under environmental changes.
+
+\subsubsection{Hierarchical Semantic Grounding}
+Following a hierarchical search strategy similar to \cite{Werby-RSS-24}, the agent parses natural language instructions (\emph{e.g.}, \textit{``Grasp the blue mug on the table''}) into a $\langle \text{Region}, \text{Landmark}, \text{Object} \rangle$ triplet with a VLM~\cite{hurst2024gpt}.
+The system sequentially queries $\mathcal{F}_{spat}$ to constrain the search space: localizing the room, identifying the landmark, and finally retrieving the target object node $v_i$. The object's centroid $\mathbf{c}_i$, refined by Eq.~\ref{eq:grounding}, serves as the robust navigation goal, ensuring the path is anchored in semantically stable regions.
+
+\subsubsection{Stability-Aware Execution and Safety Verification}
+To manage humanoid constraints, we implement a Stability-Aware Local Planner that prioritizes Center of Mass (CoM) stability over efficiency. The planner dynamically scales the velocity based on the angular error to suppress gait-induced oscillations, preserving perception quality during motion, as shown in Fig.~\ref{fig:navigation_control}.
+
+
+
+Crucially, navigation completion is defined by the IPS metric, not a simple coordinate arrival. Before manipulation, the agent renders a query view against $\mathcal{F}_{geom}$. If the synthesized mesh indicates collision risks or insufficient grasp clearance, the system triggers a local micro-adjustment, shifting the stance to a feasible interaction zone verified by $S_{IPS}$.
+
+\subsubsection{Closed-Loop Memory Evolution}
+We leverage navigation trajectories to continuously validate the memory map through the Interaction and Adaptation Mechanism. The discrepancy score $\mathcal{D}$ distinguishes between two states:
+
+\begin{itemize}
+    \item \textbf{Transient Discrepancy:} Temporary obstacles (\emph{e.g.} moving people) trigger local avoidance behaviors without altering the global map.
+    \item \textbf{Structural Mismatch (P2):} A persistent surge in $\mathcal{D} > \tau_{replan}$ signals a genuine map-reality conflict (\emph{e.g.}, moved furniture). This halts the task and triggers the Active Memory Evolution Loop: actively scan the discrepant region to gather multi-view evidence, updates $\mathcal{F}_{app}$ and $\mathcal{F}_{spat}$, and re-grounds the query in the evolved topology.
+\end{itemize}
+
+This mechanism closes the loop between perception and action, ensuring that MIF remains a ``living'' representation synchronized with the dynamic world.
+
+\section{EXPERIMENTAL EVALUATION}
+\label{sec:experiments}
+
+The experiments are designed to verify the MIF framework's efficacy in transforming humanoid robots from passive map-users into active knowledge-evolvers. Our analysis focuses on validating the resolution of the two critical vulnerabilities identified in the Introduction: Semantic-Geometric Distortion (P1) and Map-Reality Mismatch (P2). The evaluation is structured to answer three core questions:
+\begin{itemize}
+    \item \textbf{Q1 (Solving P1):} Can MIF achieve robust semantic grounding despite the severe camera jitter caused by bipedal locomotion?
+    \item \textbf{Q2 (Enabling Interaction):} Does the Geometry Field and IPS protocol significantly improve the manipulation feasibility compared to standard baselines?
+    \item \textbf{Q3 (Solving P2):} Can the Interaction and Adaptation Mechanism robustly detect and resolve environmental changes?
+\end{itemize}
+
+Due to space constraints, we present only core evaluations of the core contributions here; additional quantitative results and visualizations are included in the supplementary materials.
+
+\subsection{Experimental Setup}
+We perform real-world tests in a $100~\text{m}^2$ dynamic office containing $>100$ object categories. The system runs on a centralized server (NVIDIA RTX 4090) communicating with a Unitree G1 robot via ROS1. To isolate the contribution of our system, all experiments use a shared robust SLAM backend. Due to space limitations, we encourage the reader to refer to the supplementary material for a more comprehensive understanding of the system architecture and software stacks. 
+
+In the following experiments, we compare MIF against two SOTA baselines:
+\begin{itemize}
+    \item \textbf{Feature-Splatting}~\cite{qiu2024featuresplatting}: A baseline representing dense 3DGS without our jitter-aware confidence mechanism.
+    \item \textbf{HOV-SG} \cite{Werby-RSS-24}: The current SOTA approach for open-vocabulary scene graphs relying on static segment fusion.
+\end{itemize}
+
+\subsection{Robust Semantic Grounding under Distortion (Q1)}
+\label{sec:exp_semantic_grounding}
+
+This experiment evaluates the resilience of $\mathcal{F}_{app}$ and $\mathcal{F}_{spat}$ to P1. We tasked Unitree-G1 with identifying specific objects from the ``fuzzy" instructions, \emph{e.g.}, \textit{``Find the water bottle"}.
+
+\subsubsection{Quantitative Results}
+We adopt the success criterion from HOV-SG~\cite{Werby-RSS-24}: a query is successful if the predicted object semantically matches the ground truth and its centroid lies within $1.0\text{m}$ of the target. However, as safe humanoid interaction requires higher precision than wheeled navigation, we additionally report the Mean Distance Error (MDE).
+
+As shown in Table~\ref{tab:semantic_results}, MIF achieves a 92\% Success Rate, outperforming HOV-SG (74\%) and Feature-Splatting (65\%).
+
+\begin{itemize}
+    \item \textbf{Suppression of Smearing (P1)}: Feature-Splatting suffers from severe ``semantic smearing" due to oscillation, leading to 0.42m MDE. In contrast, MIF's confidence-gated integration ($\Omega_i$) effectively filters unstable observations with 0.18m MDE, ensuring precise semantic anchors.
+    \item \textbf{Efficiency}: By distilling high-dimensional features into a compact 32D space, MIF reduces the semantic memory footprint by 91.4\% compared to baselines, allowing $\mathcal{F}_{spat}$ to index large-scale environments with a reasoning latency of just 1.6s (vs 2.8s for HOV-SG).
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\caption{Quantitative Results of Semantic Grounding (Under Distortion)}
+\label{tab:semantic_results}
+\begin{tabular}{@{}lcccc@{}}
+\toprule
+\textbf{Method} & \textbf{Success Rate} & \textbf{MDE (m)} & \textbf{Latency (s)} \\ \midrule
+Feature-Splatting~\cite{qiu2024featuresplatting} & 65\% & 0.42 & 3.2 \\
+HOV-SG~\cite{Werby-RSS-24} & 74\% & 0.35 & 2.8 \\
+\textbf{MIF (Ours)} & \textbf{92\%} & \textbf{0.18} & \textbf{1.6} \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{High-fidelity Geometry for Interaction Safety (Q2)}
+\label{sec:exp_navigation}
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.95\columnwidth]{RSS/images/Pure_Pursuit.pdf}
+    \caption{\textbf{Humanoid navigation control via Pure Pursuit.} The schematic illustrates the geometric tracking logic where the Unitree-G1 robot targets a lookahead point at distance $L$ along the planned trajectory. The heading error $\Delta\theta$ is used to compute the required curvature $\kappa = 2\sin(\Delta\theta)/L$. The overlaid velocity curve demonstrates the adaptive scaling mechanism, where $L$ is dynamically adjusted to suppress oscillations and maintain humanoid balance during high-curvature maneuvers.}
+    \label{fig:navigation_control}
+\end{figure}
+This experiment evaluates the transition from navigation to manipulation. We validate the necessity of the Geometry Field in computing the Terminal Interaction Pose.
+
+\subsubsection{The Necessity of High-fidelity Geometry}
+Comparison against raw point-cloud planning (Table~\ref{tab:nav_results}) reveals that MIF reduces the pose calculation failure rate from 38\% (baseline) to 6\%. These failures in the baseline are largely due to geometric artifacts (P1) that occlude valid workspaces.
+
+Crucially, regarding safety, the baseline suffers from a high collision rate (32\%): the sparsity of raw point clouds leads to False Poitives in the IPS check (\emph{i.e.}, $\mathbf{I}_{col}$ returns 1 despite actual collision risks). By inferring watertight manifolds, MIF eliminates these risks and ensures actionable safety.
+
+
+\subsubsection{Interaction Performance}
+A navigation success is only if $S_{IPS}=1$ on arrival. The MIF achieved a mean position error of $\mathbf{0.12}$~m. This high precision is critical to satisfying the kinematic reachability $\mathbf{I}_{ik}$, as larger errors usually place the robot outside the feasible manipulation workspace.
+
+Furthermore, the active gaze strategy $Q(k)$ stabilized the perceptual input, which is a prerequisite for valid geometric safety checks $\mathbf{I}_{col}$: by minimizing motion blur, it ensures that the generative model~\cite{lipman2022flow, chen2025sam} receives clean conditioning views to reconstruct accurate collision boundaries for IPS verification.
+
+\vspace{1mm}
+\noindent \textbf{Baseline Comparison Analysis.}
+To validate these gains, we compared MIF against two ablative baselines:
+\begin{itemize}
+    \item \textbf{Pt-Cloud Baseline:} Plans directly on the raw, sparse centroids of Gaussian primitives. Lacking explicit surface connectivity, this method suffers from severe geometric sparsity, causing the IPS check to miss obstacles through gaps and resulting in a high collision rate (32\%).
+    \item \textbf{Static Mesh Baseline:} Employs standard TSDF fusion~\cite{oleynikova2016signed} without confidence gating. This approach naively integrates locomotion-induced artifacts, baking motion blur into the map. The resulting distorted geometries occlude valid workspaces, leading to increased positioning errors (0.22m) and lower success rates.
+\end{itemize}
+In contrast, MIF resolves both sparsity and smearing, achieving a 94\% success rate with zero collisions.
+
+\begin{table}[h]
+\centering
+\small
+\caption{Interaction Feasibility Comparison. We compare our generative approach against a \textbf{Pt-Cloud Baseline} and a \textbf{Static Mesh Baseline}.}
+\label{tab:nav_results}
+\begin{tabularx}{\columnwidth}{@{} l c c c @{}} 
+\toprule
+\textbf{Method} & \textbf{IPS Success (\%)} & \textbf{Nav. Err. (m)} & \textbf{Collision Rate} \\ \midrule
+Pt-Cloud & 62\% & 0.28 & 32\% \\
+Static Mesh & 78\% & 0.22 & 14\% \\
+\textbf{MIF (Ours)} & \textbf{94\%} & \textbf{0.12} & \textbf{0\%} \\ \bottomrule
+\end{tabularx}
+\end{table}
+
+
+% \subsection{Dynamic Adaptation to Map-Reality Mismatches (Q3)}
+% \label{sec:exp_adaptation}
+
+% \begin{figure*}[t]
+%     \centering
+%     \includegraphics[width=\textwidth]{RSS/images/Change.png}
+%     \caption{\textbf{Dynamic adaptation of the hierarchical scene graph to environmental changes.} (a) \textbf{Detection}: Upon arriving at the goal, the G1 robot detects a structural discrepancy (\emph{e.g.}, a moved sofa) that contradicts its prior memory, triggering a sharp spike in the discrepancy score $\mathcal{D}$. (b) \textbf{Resolution}: The MIF framework triggers the \textit{Active Memory Evolution Loop}, autonomously reconciling the Spatial Field with fresh observations. The updated graph aligns with the physical reality, reducing $\mathcal{D}$ and ensuring consistent world representation for subsequent tasks.}
+%     \label{fig:adaptation}
+% \end{figure*}
+
+% This experiment validates the Interaction and Adaptation Mechanism in resolving \textbf{P2}. We introduced structural perturbations (Relocation, Removal, and Addition) to the environment post-mapping. Specifically, the ``Relocation'' task involves moving a target object to a new position after the initial mapping phase, forcing the agent to resolve the conflict between its obsolete memory and the physical reality.
+
+% The system monitors the multi-modal discrepancy score $\mathcal{D}$ to distinguish between sensor noise and genuine changes.
+
+% \begin{itemize}
+%     \item \textbf{Noise Rejection (P1)}: Confidence gating ($\Omega_i$) prevents locomotion-induced observations from triggering false updates. Our ablation study shows that removing this gating increases false positives by 42\%, proving that stability is a prerequisite for reliable change detection.
+    
+%     \item \textbf{Baseline' Failure Mode}: As shown in Table~\ref{tab:adaptation_comparison}, static baselines such as HOV-SG collapse in dynamic settings (\emph{e.g.}, 12\% SR for Relocation). With the ``map-once-query-forever'' paradigm~\cite{Werby-RSS-24}, they navigate to obsolete coordinates and cannot correct their internal topology.
+    
+%     \item \textbf{Active Adaptation}: In contrast, MIF detects the surge in $\mathcal{D}$ and triggers the Memory Evolution Loop. After a single active scan and update, the success rate for Relocation tasks recovers from an initial 64\% to 94\% (fully updated topology). Similarly, for ``Addition'' tasks, where static baselines fail completely (0\%), MIF achieves 86\% by seamlessly integrating new nodes into the graph.
+% \end{itemize}
+
+% \begin{table}[h]
+% \centering
+% \small
+% \caption{Task Success Rate with Environment Changes. 
+% \textbf{``MIF (Initial)''} means the agent relies on \textbf{local reactive perception} at the obsolete location before updating the global map. High success here (64\%) indicates MIF's robustness to minor displacements. 
+% \textbf{``MIF (Post-Update)''} reflects the final performance after triggering the Memory Evolution Loop, allowing the agent to locate objects that were moved outside the local field of view.}
+% \label{tab:adaptation_comparison}
+% \begin{tabular}{@{}lccc@{}}
+% \toprule
+% \textbf{Scenario} & \textbf{HOV-SG (Static)} & \textbf{MIF (Initial)} & \textbf{MIF (Post-Update)} \\ \midrule
+% Relocation & 12\% & 64\% & \textbf{94\%} \\
+% Removal & 10\% & 68\% & \textbf{98\%} \\
+% Addition & 0\% & 42\% & \textbf{86\%} \\ \bottomrule
+% \end{tabular}
+% \end{table}
+
+
+
+\subsection{Dynamic Adaptation to Map-Reality Mismatches (Q3)}
+\label{sec:exp_adaptation}
+
+% [Figure remains unchanged]
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{RSS/images/Change.png}
+    \caption{\textbf{Dynamic adaptation of the hierarchical scene graph to environmental changes.} (a) \textbf{Detection}: Upon arriving at the goal, the G1 robot detects a structural discrepancy (\emph{e.g.}, a moved sofa) that contradicts its prior memory, triggering a sharp spike in the discrepancy score $\mathcal{D}$. (b) \textbf{Resolution}: The MIF framework triggers the \textit{Active Memory Evolution Loop}, autonomously reconciling the Spatial Field with fresh observations. The updated graph aligns with the physical reality, reducing $\mathcal{D}$ and ensuring consistent world representation for subsequent tasks.}
+    \label{fig:adaptation}
+\end{figure*}
+
+This experiment validates the Interaction Adaptation Mechanism to resolve \textbf{P2}. We introduced structural perturbations (Relocation, Removal, and Addition) to the environment post-mapping. Specifically, the ``Relocation'' task involves moving a target object to a new position after the initial mapping phase.
+
+\subsubsection{Evaluation Protocol}
+We define a task as Successful only if the robot navigates to the \textit{actual current location} of the target object (or correctly reports removal) and successfully validates the Interaction Pose Safety ($S_{IPS}=1$). Merely arriving at the obsolete coordinates recorded in the memory is considered a failure.
+
+\subsubsection{Results Analysis}
+The system continuously monitors the discrepancy score $\mathcal{D}$ to distinguish between sensor noise and genuine changes, the qualitative results can be seen in Fig.~\ref{fig:adaptation}. 
+
+\begin{itemize}
+    \item \textbf{Failure of Static Baselines}: As shown in Table~\ref{tab:adaptation_comparison}, static baselines like HOV-SG fail catastrophically in dynamic settings (\emph{e.g.}, 12\% SR for Relocation). Adhering to the ``map-once-query-forever'' paradigm~\cite{Werby-RSS-24}, they blindly navigate to obsolete coordinates and lack the mechanism to correct internal topology when the object is missing.
+    
+    \item \textbf{Effectiveness of Active Adaptation}: 
+    Table~\ref{tab:adaptation_comparison} decomposes the performance of MIF into two stages:
+    \begin{enumerate}
+        \item \textbf{MIF (Initial - Reactive)}: This represents the robot's ability to handle minor displacements using real-time perception upon arriving at the obsolete location. If the moved object remains within the robot's Field-of-View (FOV), the local planner reacts and completes the task without map updates. This explains the 64\% success rate, which corresponds to cases where the displacements were small ($<1.5$m).
+        \item \textbf{MIF (Post-Update - Evolving)}: For large-scale displacements (object moved out of sight), the initial reactive attempt fails. However, the surge in $\mathcal{D}$ triggers the Memory Evolution Loop. After actively scanning and updating the Spatial Field, MIF re-plans to the new location, boosting the final success rate to \textbf{94\%}.
+    \end{enumerate}
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Task Success Rate with Environment Changes. 
+\textbf{``MIF (Initial)''} denotes the success rate achieving solely by local reactive perception (\emph{i.e.}, the object was moved but remains visible from the old location).
+\textbf{``MIF (Post-Update)''} reflects the final performance after triggering the Memory Evolution Loop, which enables the robot to locate objects moved outside the local field of view.}
+\label{tab:adaptation_comparison}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\textbf{Scenario} & \textbf{HOV-SG} & \textbf{MIF (Initial)} & \textbf{MIF (Post-Update)} \\ \midrule
+Relocation & 12\% & 64\% & \textbf{94\%} \\
+Removal & 10\% & 68\% & \textbf{98\%} \\
+Addition & 0\% & 42\% & \textbf{86\%} \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{System Efficiency}
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=0.95\linewidth]{RSS/images/Feature_Realtime.pdf}
+\caption{Efficiency and Performance Trade-off Analysis. This figure illustrates the compelling trade-off achieved by our 32D compact features compared to original high-dimensional features. While maintaining a near-lossless segmentation accuracy of 0.98 relative to the baseline, our method reaches a normalized inference speed of 1.00 and reduces the memory footprint to 0.09 (a 91\% reduction). This strategic balance enables real-time performance on an NVIDIA RTX 4090 while hosting multiple VLMs/LLMs.}
+\label{fig:efficiency_ablation}
+    \label{fig:efficiency_ablation}
+\end{figure}
+
+
+\label{sec:exp_performance}
+We analyze the computational cost to ensure deployability, as shown in Fig.~\ref{fig:efficiency_ablation}.
+\begin{itemize}
+    \item \textbf{Real-time Capability:} $\mathcal{F}_{app}$ supports incremental updates at 22 FPS. The asynchronous generation of $\mathcal{F}_{geom}$ takes 6.2s, which is effectively masked by the robot's approach time, causing zero delay to the control loop.
+    \item \textbf{Memory Efficiency:} Feature distillation reduces VRAM usage by 91.4\%, allowing the complete hierarchical map of a $100~m^2$ office to fit within 4GB of GPU memory.
+\end{itemize}
+
+
+\section{CONCLUSION}
+\label{sec:conclusion}
+
+In this work, we introduced the Multi-modal Interactive Field (MIF), a unified framework designed to bridge the gap between high-level linguistic reasoning and physically feasible interaction for humanoid robots. By hierarchically integrating a denoised Appearance Field (via 3DGS-SLAM), a topology-aware Spatial Field, and a Flow Matching-based Geometry Field, our system effectively resolves locomotion-induced semantic misalignment (P1) and spatio-semantic obsolescence (P2). Extensive real-world evaluations on the Unitree G1 humanoid demonstrate that MIF establishes a new standard for manipulation-oriented navigation. By enforcing rigorous Interaction Pose Safety (IPS), our approach significantly outperforms static baselines, achieving a 94\% success rate in dynamic relocation scenarios. Crucially, our proposed Interaction-Aware Update Mechanism transforms the robot from a passive map-user into an active knowledge-evolver, capable of distinguishing environmental shifts from motion noise to autonomously maintain map fidelity. Nevertheless, our approach is not without limitations. While the high-fidelity geometry ensures safety, the generative inference entails a latency of several seconds, currently necessitating asynchronous execution during the approach phase. Furthermore, although we achieve significant memory compression via distillation, the reliance on multiple heavy foundation models imposes high computational demands on onboard hardware. Future research directions will focus on optimizing the generative pipeline for real-time performance and extending the Interaction Learning loop to multi-agent scenarios, enabling collaborative memory evolution across heterogeneous fleets. 
+
+
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\clearpage
+\renewcommand{\baselinestretch}{1}
+\setlength{\belowcaptionskip}{0pt}
+
+\begin{strip}
+\begin{center}
+\vspace{-5ex}
+\textbf{\LARGE \bf
+Learning to Evolve: Multi-modal Interactive Fields for Robust Humanoid Navigation in Dynamic Environments
+} \\
+\vspace{3ex}
+
+\Large{\bf- Supplementary Material -}\\
+\vspace{0.6cm}
+\normalsize{Author Names Omitted for Anonymous Review. Paper-ID 256}
+
+\vspace{0.5cm}
+\hrule
+\vspace{0.3cm}
+
+\begin{minipage}{0.96\textwidth} % 使用 minipage 控制宽度，保持阅读舒适度
+\normalsize % 或 \small，根据需要调整字号
+\textit{
+Due to the strict page constraints of the main manuscript, which prioritized the theoretical methodology, core algorithmic contributions, and the task-level quantitative results of the Multi-modal Interactive Field (MIF), the intricate engineering realizations, deployment specifics, and massive qualitative visualization were necessarily abbreviated. 
+Therefore, this supplementary material serves as a critical complement, aiming to bridge the gap between theory and reproducible practice. We provide a comprehensive elaboration on the \textbf{system architecture}, the detailed \textbf{algorithmic execution logic}, and the specific \textbf{navigation and tracking implementations}. Furthermore, we present extended \textbf{qualitative visualizations}—covering dynamic adaptation sequences and safety verifications—to rigorously demonstrate the system's robustness in diverse real-world deployments.
+}
+\end{minipage}
+
+\vspace{0.5cm}
+\hrule
+\vspace{0.3cm}
+
+
+\noindent\textbf{\large Outline of Supplementary Material}
+
+\vspace{0.2cm}
+% 使用 minipage 限制宽度，防止文字过于分散，同时利于整体居中
+\begin{minipage}{0.96\textwidth}
+This document provides additional implementation details, quantitative analyses, and qualitative visualizations to support the claims made in the main manuscript. The content is organized as follows:
+
+% 设置紧凑的列表间距
+\begin{itemize} \setlength{\itemsep}{0.3em} \setlength{\parskip}{0pt} \setlength{\parsep}{0pt}
+    \item \textbf{\hyperref[sec:implementation_details]{Section S.1: System Implementation Details}}
+    \begin{itemize} \setlength{\itemsep}{1pt} \setlength{\topsep}{0pt} \small
+        \item \textbf{Hardware Architecture:} Specifications of the Unitree G1 humanoid platform, RealSense D435i sensor setup, and the hybrid onboard/offboard distributed computing strategy.
+        \item \textbf{Software Stack:} Technical breakdown of the Jitter-Aware 3DGS backend, VLM prompt engineering for spatial reasoning (GPT-4o), and the Flow Matching network architecture.
+        \item \textbf{System Architecture:} A comprehensive dataflow diagram illustrating the asynchronous coordination between the Front-end Perception, Spatial Reasoning Engine, and Navigation Core.
+    \end{itemize}
+
+    \item \textbf{\hyperref[sec:algo_workflow]{Section S.2: Algorithmic Workflow}}
+    \begin{itemize} \setlength{\itemsep}{1pt} \setlength{\topsep}{0pt} \small
+        \item \textbf{Algorithm 1 (MIF Execution Loop):} A detailed pseudo-code description delineating the closed-loop interaction between semantic grounding, stability-aware navigation, and the active memory evolution mechanism.
+    \end{itemize}
+
+    \item \textbf{\hyperref[sec:hyperparameters]{Section S.3: Hyperparameter Settings}}
+    \begin{itemize} \setlength{\itemsep}{1pt} \setlength{\topsep}{0pt} \small
+        \item \textbf{Confidence Gating Parameters:} Specific values for gradient penalty ($\beta$) and opacity scaling ($\gamma$) used to suppress locomotion-induced noise.
+        \item \textbf{Interaction & Adaptation:} Weighting coefficients ($w_{pos}, w_{sem}, w_{rel}$) for the multi-modal discrepancy score $\mathcal{D}$ and re-planning thresholds.
+        \item \textbf{Safety Protocol:} Geometric margins ($\delta_{safe}$) and support polygon definitions for the Interaction Pose Safety (IPS) check.
+    \end{itemize}
+
+    \item \textbf{\hyperref[sec:add_experiments]{Section S.4: Additional Quantitative Results}}
+    \begin{itemize} \setlength{\itemsep}{1pt} \setlength{\topsep}{0pt} \small
+        \item \textbf{Ablation Study (Confidence Gating):} Metrics (PSNR, SSIM, Depth L1) and change detection rates (FPR) validating the necessity of jitter suppression for robust mapping.
+        \item \textbf{Navigation Stability Analysis:} Evaluation of the local planner's efficacy in minimizing torso oscillation and preserving perceptual quality.
+    \end{itemize}
+
+    \item \textbf{\hyperref[sec:qualitative_results]{Section S.5: More Qualitative Visualizations}}
+    \begin{itemize} \setlength{\itemsep}{1pt} \setlength{\topsep}{0pt} \small
+        \item \textbf{Robustness of Appearance Field:} Visual ablation comparing standard integration vs. Confidence Gating (Rows 1-3), and verification of \textit{Dynamic Appearance Update} under environmental changes (Row 4).
+        \item \textbf{Geometric Safety Verification:} Comparison between sparse Gaussian point clouds and generated watertight meshes, highlighting the necessity for IPS collision checks.
+        \item \textbf{Dynamic Adaptation Sequence:} Chronological visualization of the Memory Evolution Loop resolving a "Sofa Relocation" (P2) scenario.
+        \item \textbf{Real-World Deployment Showcase:} A gallery of diverse humanoid tasks including social patrol, collision-free office navigation, and mobile manipulation.
+    \end{itemize}
+\end{itemize}
+\end{minipage}
+
+\vspace{0.3cm}
+\hrule
+\vspace{0.8cm}
+
+\end{center}
+\end{strip}
+
+
+\setcounter{section}{0}
+\setcounter{equation}{0}
+\setcounter{figure}{0}
+\setcounter{table}{0}
+\setcounter{page}{1}
+\makeatletter
+
+\renewcommand{\thesection}{S.\arabic{section}}
+\renewcommand{\thesubsection}{S.\arabic{section}-\Alph{subsection}}
+\renewcommand{\thetable}{S.\arabic{table}}
+\renewcommand{\thefigure}{S.\arabic{figure}}
+
+% --------------------------------
+\clearpage
+\section{System Implementation Details}
+\label{sec:implementation_details}
+
+In this section, we provide a comprehensive breakdown of the hardware architecture and software stack to ensure the reproducibility of our Multi-modal Interactive Field (MIF) framework.
+
+\subsection{Hardware Architecture}
+
+\subsubsection{Robot Platform and Sensors}
+We deploy our system on the Unitree G1 humanoid robot. The robot is equipped with a head-mounted Intel RealSense D435i RGB-D camera, which provides synchronized color and depth streams at a resolution of $640 \times 480$ (30 Hz). The intrinsic parameters are calibrated offline, while the extrinsic transform between the camera and the robot's base link is maintained via the robot's kinematic chain.
+
+\subsubsection{Computation and Communication}
+To balance the computational load of high-frequency locomotion control and heavy visual reasoning, we adopt a hybrid computing architecture:
+
+\begin{itemize}
+    \item \textbf{Onboard Compute:} The robot's built-in NVIDIA Jetson Orin NX handles low-level gait control, state estimation (IMU/Odometry), and hardware interface bridging.
+    \item \textbf{Offboard Compute:} The MIF framework (3DGS mapping, VLM reasoning, and Flow Matching generation) runs on a remote high-performance workstation.
+    % --- 修改点 3: 模糊化通信细节 ---
+    \item \textbf{Communication Stack:} We utilize ROS1 Noetic for middleware communication. To mitigate bandwidth bottlenecks caused by high-frequency image transmission during locomotion, we employ the \texttt{image\_transport} library with \textit{Compressed} encoding (JPEG quality 80) for RGB streams and 16-bit PNG compression for depth streams. This configuration maintains a stable transmission rate of approx. 25 Hz with $<50$ms latency.
+    % --------------------------------
+\end{itemize}
+
+\subsubsection{Server Specifications}
+The offboard workstation is configured to support the parallel execution of rendering and generation models using standard commercial hardware. It is equipped with an Intel Core i9-13900K CPU (24 Cores, 5.8 GHz), 64 GB of DDR5 RAM ($5600$ MHz), and a high-end consumer-grade NVIDIA GPU (24 GB VRAM). This setup avoids reliance on specialized enterprise-grade servers while providing sufficient computation to achieve the reported 22 FPS for $\mathcal{F}_{app}$ maintenance and $<6.2$s latency for $\mathcal{F}_{geom}$ generation.
+
+\subsection{Software Stack}
+
+
+
+\subsubsection{3DGS Backend}
+
+Our Incremental Appearance Field is built upon a heavily optimized Gaussian Splatting backend. We utilize the \texttt{diff-gaussian-rasterization} library customized with CUDA kernels for fast spherical harmonics addition and deletion. The SLAM frontend is implemented in Python/PyTorch, leveraging \texttt{diff-gaussian-rasterization-w-depth} for efficient differentiable rasterization. The uncertainty gating ($\Omega_i$) is implemented as a custom PyTorch CUDA extension to ensure zero-overhead filtering during the forward pass.
+
+
+
+\subsubsection{VLM \& Prompt Engineering}
+
+For the Spatial Field ($\mathcal{F}_{spat}$) construction, we employ \textbf{GPT-4o} (OpenAI) as the reasoning core due to its superior spatial understanding capabilities. The model parses synthesized views into structured scene graph nodes. 
+
+
+
+To ensure the output adheres to a strict JSON schema for topological parsing, we design a structural prompt shown in Figure~\ref{fig:prompt_engineering}. This prompt enforces the extraction of object categories, bounding box estimates (2D), and spatial prepositions (e.g., ``on'', ``next to'') relative to known landmarks.
+
+
+
+\begin{figure}[h]
+
+\centering
+
+\begin{tcolorbox}[colback=gray!5,colframe=gray!40,title=\textbf{VLM Prompt for Spatial Graph Generation}]
+
+\footnotesize
+
+\texttt{\textbf{System Instruction:}} You are a robot's spatial reasoning engine. Analyze the provided image (synthesized from stable view) and extract key objects. \\
+
+\texttt{\textbf{Input:}} An image of an office scene. \\
+
+\texttt{\textbf{Output Constraint:}} Return a strictly valid JSON list. Each item must contain: \\
+
+- "object\_id": unique integer \\
+
+- "category": specific object name (e.g., "monitor", not "electronics") \\
+
+- "relations": list of spatial relations to other objects (e.g., ["on", "desk\_1"]) \\
+
+- "attributes": visual descriptors (e.g., "black", "off") \\
+
+\\
+
+\texttt{\textbf{User Query:}} "Identify all interactable objects in this view and their spatial relationships."
+
+\end{tcolorbox}
+
+\caption{\textbf{Prompt Engineering for Scene Graph Construction.} We enforce structured JSON output to enable direct parsing into the topological graph $\mathcal{M}_{spat}$.}
+
+\label{fig:prompt_engineering}
+
+\end{figure}
+
+
+
+\subsubsection{Flow Matching Model Architecture}
+
+The Geometry Field ($\mathcal{F}_{geom}$) is realized via a state-of-the-art, pre-trained conditional Flow Matching model~\cite{chen2025sam}. By leveraging this large-scale foundation model, we circumvent the prohibitive computational cost of training generative priors from scratch while benefiting from its robust zero-shot generalization capabilities.
+
+\begin{itemize}
+    \item \textbf{Backbone Architecture:} We utilize a pre-trained Flow-Matching Transformer backbone. The model scales to approximately 1.2B parameters and is architected to process shape tokens—derived from a compressed latent voxel representation—within a unified continuous-time framework. This backbone effectively denoises geometry and layout variables jointly, ensuring structural consistency for diverse object categories.
+    
+    \item \textbf{Conditioning \& Tokenization:} The generation process is conditioned on semantic visual features extracted via a frozen DINOv2 encoder. To bridge the modality gap, continuous pose parameters and voxel latents are projected into a shared high-dimensional latent space, allowing the transformer to attend to both geometric and semantic cues during the denoising process.
+    
+    \item \textbf{Inference Strategy:} We employ an Ordinary Differential Equation (ODE) solver for deterministic sampling. To balance reconstruction fidelity with the latency constraints of the robotic interaction loop ($<6.2$s), we utilize a distilled inference setting with $N=25$ function evaluation steps (NFE), as supported by the pre-trained model's flow-straightening properties.
+\end{itemize}
+
+\subsubsection{System Architecture Implementation}
+\label{sec:system_arch}
+
+The hardware-software infrastructure supporting the \textbf{Multi-modal Interactive Field (MIF)} is implemented as a distributed network, split between the onboard robot hardware and a high-performance offboard compute server, as illustrated in Fig.~\ref{fig:sys_arch}. This architecture orchestrates asynchronous data flows to handle varying frequency requirements, ranging from high-frequency control loops to latent semantic reasoning.
+
+\begin{figure*}[h]
+    \centering
+    \includegraphics[width=\linewidth]{RSS/images/SYSTEM_PIPELINE.png}
+    \caption{\textbf{System Architecture and Dataflow.} The architecture is divided between the \texttt{Onboard Robot} for sensing and low-level control, and the \texttt{Offboard Compute Server} for heavy computation. On the server, processing is structured into four main engines: \texttt{Perception Engine} (constructing $\mathcal{F}_{app}$), \texttt{Spatial Reasoning Engine} (constructing $\mathcal{F}_{spat}$), \texttt{Interaction \& Planning Core}, and the \texttt{On-Demand Geometry Service} (generating $\mathcal{F}_{geom}$). Crucially, the \texttt{Discrepancy Monitor} closes the loop, triggering the active memory evolution cycle upon detecting map-reality mismatches.}
+    \label{fig:sys_arch}
+\end{figure*}
+
+The system comprises distinct computational modules distributed as follows:
+
+\noindent \textbf{1. Onboard Computation (Unitree G1 with Jetson Orin):}
+This layer serves as a hardware abstraction interface, encapsulating low-level device drivers and physical control protocols to provide standardized state data to the offboard system, while managing real-time I/O.
+\begin{itemize}
+    \item \textbf{Sensors:} Acquires raw data from the RGB-D Camera (D435i) and IMU/Kinematics.
+    \item \textbf{Image Transport Bridge:} Compresses high-bandwidth RGB-D streams to minimize latency before transmission to the offboard server.
+    \item \textbf{Low-Level Controller:} Executes gait and torso actuation commands received from the offboard local planner.
+\end{itemize}
+
+\noindent \textbf{2. Offboard Compute Server:}
+Incoming compressed streams are first handled by the \texttt{Data Decompression \& Synchronization} module before being dispatched to four primary engines:
+
+\begin{itemize}
+    \item \textbf{Perception Engine (Appearance Field - $\mathcal{F}_{app}$):} Responsible for real-time dense mapping. It runs the 3DGS SLAM Backend, integrating Jitter-Aware Confidence Estimation (Eq. 1) and Feature Distillation (CLIP/DINOv2) to maintain the dynamic Appearance Field.
+
+    \item \textbf{Spatial Reasoning Engine (Spatial Field - $\mathcal{F}_{spat}$):} Asynchronously builds topological understanding. It processes outputs from Stabilized View Rendering using VLM (GPT-4o) Parsing and a Scene Graph Builder to construct and update the hierarchical Spatial Field.
+
+    \item \textbf{Interaction \& Planning Core:} The central executive for navigation. It utilizes real-time observations for Semantic Grounding and target refinement. It executes the Global Planner (A*) and the Stability-Aware Local Planner (Pure Pursuit), sending control commands back to the onboard robot.
+
+    \item \textbf{On-Demand Geometry Service (Geometry Field - $\mathcal{F}_{geom}$):} Triggered only when approaching an interaction target. It uses an Active Gaze Strategy $Q(k)$ to condition a Flow Matching Model (DiT), synthesizing a high-fidelity mesh. This mesh is passed to the IPS Verification Check to determine interaction feasibility (go/no-go).
+\end{itemize}
+
+Crucially, the architecture features a closed-loop Discrepancy Monitor ($\mathcal{D}$) \& Adaptation Mechanism. This module continuously monitors for map-reality mismatches. If the discrepancy $\mathcal{D}$ exceeds a threshold $\tau$, it triggers an update signal to the Perception and Spatial engines, initiating the Active Memory Evolution Loop to rectify obsolete data. For a detailed step-by-step breakdown of this execution logic and the interaction between these modules, please refer to Algorithm~\ref{alg:main_loop} in Section~\ref{sec:algo_workflow}.
+
+
+\section{Hyperparameter Settings}
+\label{sec:hyperparameters}
+
+To facilitate exact reproduction of our experiments, we list all critical hyperparameters used in the MIF framework. These parameters were empirically tuned on a held-out validation set collected in the Habitat simulator and kept fixed across all real-world experiments.
+
+\subsection{Confidence Gating Parameters}
+In the Appearance Field ($\mathcal{F}_{app}$), the confidence score $C_i$ (Eq.~\ref{eq:confidence}) is governed by the sharpness of the gradient penalty ($\beta$) and the opacity scaling factor ($\gamma$). The specific values for these parameters, along with the confidence threshold, are detailed in Table~\ref{tab:params_confidence}.
+
+\begin{table}[h]
+\centering
+\caption{\textbf{Parameters for Jitter-Aware Confidence Gating.}}
+\label{tab:params_confidence}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}ccl@{}}
+\toprule
+\textbf{Symbol} & \textbf{Value} & \textbf{Description} \\ \midrule
+$\beta$ & 5.0 & Controls the sensitivity to high-frequency gradient variance. \\
+$\gamma$ & 2.0 & Scaling factor for opacity-based reliability. \\
+$\tau_{conf}$ & 0.6 & Minimum confidence threshold for VLM rendering. \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+\subsection{Interaction \& Adaptation Mechanism}
+The Discrepancy Score $\mathcal{D}$ (Eq.~\ref{eq:delta_calc}, \ref{eq:total_discrepancy}) aggregates position error, semantic divergence, and topological changes to trigger re-planning. The weighting coefficients for these components and the triggering threshold are listed in Table~\ref{tab:params_discrepancy}.
+
+\begin{table}[h]
+\centering
+\caption{\textbf{Parameters for Discrepancy Detection.}}
+\label{tab:params_discrepancy}
+\begin{tabular}{@{}ccl@{}}
+\toprule
+\textbf{Symbol} & \textbf{Value} & \textbf{Description} \\ \midrule
+$w_{pos}$ & 1.0 & Weight for centroid Euclidean distance error (in meters). \\
+$w_{sem}$ & 0.5 & Weight for CLIP/DINO semantic feature cosine distance. \\
+$w_{rel}$ & 0.8 & Weight for Jaccard distance of graph edge sets. \\
+$\tau_{replan}$ & 0.45 & Threshold of $\mathcal{D}$ to trigger the Memory Evolution Loop. \\ \bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Interaction Pose Safety (IPS) Protocol}
+The IPS check serves as the rigorous safety gate before manipulation.
+\begin{itemize}
+    \item \textbf{Geometric Safety Margin ($\delta_{safe}$):} We set $\delta_{safe} = 0.05\,\text{m}$. A pose is considered collision-free only if the minimum signed distance between the robot model and the generated mesh $\mathcal{M}_{gen}$ is greater than $5\,\text{cm}$.
+    \item \textbf{Support Polygon ($\mathcal{P}_{sup}$):} Defined as the convex hull of the robot's feet contact area, with a safety shrinkage of $2\,\text{cm}$ to account for control noise.
+\end{itemize}
+
+\section{Algorithmic Workflow}
+\label{sec:algo_workflow}
+
+Algorithm~\ref{alg:main_loop} details the complete execution pipeline of the MIF framework. It delineates the interaction between the semantic reasoning (VLM), the navigation loop, and the critical \textit{Interaction Adaptation Mechanism} (P2) to eolve the memory as described in Sec.~3.3 and Sec.~3.4 of the main paper.
+
+\begin{algorithm}[h]
+\caption{Multi-modal Interactive Field (MIF) Execution Loop}
+\label{alg:main_loop}
+\begin{algorithmic}[1]
+\REQUIRE User Instruction $I$, Initial Memory $\mathcal{M} = \{\mathcal{F}_{app}, \mathcal{F}_{spat}\}$
+\STATE \textbf{Phase 1: Semantic Grounding (Sec. 3.4)}
+\STATE $\langle \text{Region}, \text{Target} \rangle \leftarrow \text{VLM\_Parse}(I)$
+\STATE $\mathbf{v}_{target} \leftarrow \text{QueryGraph}(\mathcal{F}_{spat}, \text{Target})$ \COMMENT{Retrieve target node}
+\STATE $\mathbf{c}_{goal} \leftarrow \text{RefineCentroid}(\mathbf{v}_{target}, \mathcal{F}_{app})$ \COMMENT{Eq. 3: Confidence-weighted position}
+\STATE $\mathcal{P}_{global} \leftarrow \text{PlanPath}(\mathbf{c}_{goal})$
+
+\STATE \textbf{Phase 2: Navigation \& Monitoring (Sec. 3.2)}
+\WHILE{distance($\mathbf{p}_{robot}, \mathbf{c}_{goal}$) $> \delta_{arrival}$}
+    \STATE $\mathcal{O}_{loc} \leftarrow \text{GetObservation()}$
+    \STATE $\mathcal{D} \leftarrow \text{CalcDiscrepancy}(\mathcal{O}_{loc}, \mathcal{F}_{spat})$ \COMMENT{Eq. 5: Monitor P2 Mismatch}
+    
+    \IF{$\mathcal{D} > \tau_{replan}$}
+        \STATE \textbf{Trigger Memory Evolution Loop:}
+        \STATE Stop Navigation.
+        \STATE $\text{ActiveScan}(\text{Region})$ \COMMENT{Gather multi-view evidence}
+        \STATE $\text{UpdateField}(\mathcal{F}_{app}, \mathcal{F}_{spat})$ \COMMENT{Rectify Memory}
+        \STATE $\mathbf{c}_{goal} \leftarrow \text{ReQuery}(\mathcal{F}_{spat})$ \COMMENT{Relocate target}
+        \STATE $\mathcal{P}_{global} \leftarrow \text{PlanPath}(\mathbf{c}_{goal})$ \COMMENT{Re-plan on updated map}
+    \ELSE
+        \STATE $v, \omega \leftarrow \text{StabilityAwareControl}(\mathcal{P}_{global})$ \COMMENT{Sec. S.1.3}
+        \STATE $\text{Execute}(v, \omega)$
+    \ENDIF
+\ENDWHILE
+
+\STATE \textbf{Phase 3: Interaction Verification (Sec. 3.3)}
+\WHILE{$S_{IPS} == \text{False}$} % [Fix 2: Explicit Loop for Safety Check]
+    \STATE $k^* \leftarrow \text{SelectViewpoint}(Q(k))$ \COMMENT{Eq. 6: Active Gaze}
+    \STATE $\text{MoveTo}(k^*)$
+    \STATE $I_{best} \leftarrow \text{CaptureImage}()$
+    \STATE $\mathcal{M}_{gen} \leftarrow \text{FlowMatching}(I_{best}, \text{cond}=\mathbf{v}_{target}.\text{sem})$ \COMMENT{Eq. 7}
+    \STATE $S_{IPS} \leftarrow \text{CheckIPS}(\mathcal{M}_{gen})$ \COMMENT{Eq. 9: Safety Check}
+    
+    \IF{$S_{IPS} == \text{False}$}
+        \STATE $\text{MicroAdjustStance}(\mathcal{M}_{gen})$ \COMMENT{Optimize pose to resolve collision}
+    \ENDIF
+\ENDWHILE
+
+\RETURN \text{Success}
+\end{algorithmic}
+\end{algorithm}
+
+
+\section{Additional Quantitative Results}
+\label{sec:add_experiments}
+
+In this section, we provide extended quantitative evaluations to substantiate the system's performance under dynamic humanoid locomotion. Specifically, we present a comprehensive ablation study validating the robustness of the Appearance Field against locomotion-induced noise (P1), followed by a stability analysis of our local planner in minimizing torso oscillations to ensure high-quality data capture.
+
+\subsection{Ablation Study: Efficacy of Confidence Gating}
+\label{sec:ablation_study}
+
+To validate the necessity of our Jitter-Aware Confidence Gating ($\Omega_i$) defined in Eq.~\ref{eq:confidence}, we conducted a comprehensive ablation study comparing MIF against a baseline without this gating mechanism (``w/o Gating'').
+
+
+\textbf{Quantitative Analysis.} We evaluated the semantic reconstruction quality (PSNR and SSIM) of the rendered views under different robot walking speeds. As shown in Table~\ref{tab:ablation_gating}, standard 3DGS degrades significantly at higher speeds ($0.5\,\text{m/s}$), with PSNR dropping to 21.6 dB due to severe camera jitter. In contrast, MIF maintains high fidelity ($29.8$ dB) by effectively filtering out unstable observations. Furthermore, regarding the Map-Reality Mismatch detection, removing the gating mechanism leads to a 42.3\% increase in the False Positive Rate (FPR), confirming that stability is a prerequisite for reliable dynamic adaptation.
+
+
+\begin{table}[h]
+\centering
+\caption{\textbf{Quantitative Comparison of Confidence Gating under Motion.}}
+\label{tab:ablation_gating}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\multirow{2}{*}{\textbf{Method}} & \multicolumn{2}{c}{\textbf{Slow Walk ($0.2\,\text{m/s}$)}} & \multicolumn{2}{c}{\textbf{Fast Walk ($0.5\,\text{m/s}$)}} & \textbf{Change Det.} \\ \cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-6}
+ & PSNR $\uparrow$ & SSIM $\uparrow$ & PSNR $\uparrow$ & SSIM $\uparrow$ & FPR $\downarrow$ \\ \midrule
+w/o Gating & 28.4 & 0.88 & 21.6 & 0.72 & 46.5\% \\
+\textbf{MIF (Ours)} & \textbf{31.2} & \textbf{0.93} & \textbf{29.8} & \textbf{0.89} & \textbf{4.2\%} \\ \bottomrule
+\end{tabular}%
+}
+\end{table}
+
+
+\subsection{Navigation Stability Analysis}
+We further evaluate the impact of our Stability-Aware Local Planner. We define \textit{Torso Oscillation} as the standard deviation of the camera's roll/pitch angles during traversal. 
+Compared to a standard Pure Pursuit controller, our adaptive velocity scaling reduces torso oscillation by \textbf{45\%} (from $5.2^\circ$ to $2.8^\circ$) while maintaining a low Cross-Track Error ($<0.15\,\text{m}$). This mechanical stability directly contributes to the perceptual quality reported in Table~\ref{tab:ablation_gating}.
+
+\section{Qualitative Visualizations}
+\label{sec:qualitative_results}
+
+In this section, we provide comprehensive visual evidence to demonstrate the system's robustness against humanoid locomotion noise (P1) and its adaptability to dynamic environments (P2).
+
+\subsection{Robust Mapping under Locomotion (Resolution of P1)}
+
+\subsubsection{Robustness of Appearance Field: Jitter Suppression \& Dynamic Adaptation}
+
+We visually analyze the fidelity of the Appearance Field $\mathcal{F}_{app}$ under challenging humanoid dynamics. \textbf{Rows 1-3 of Fig.~\ref{fig:supp_jitter}} illustrate the impact of the Confidence Gating mechanism during high-speed walking ($0.5\,\text{m/s}$). Standard integration methods (Right columns) fail to filter high-frequency torso jitter, resulting in severe ``ghosting" artifacts in RGB and significant noise in depth estimation (e.g., Depth L1 error increases to $0.07\,\text{cm}$). In contrast, our method (Left columns) selectively integrates only stable observations, maintaining high PSNR ($>30\,\text{dB}$) and piecewise-smooth geometry.
+
+Furthermore, \textbf{Row 4} demonstrates the malleability of the field under environmental changes. Despite the rigorous stability filtering, our system successfully registers geometric updates (\emph{e.g.,} object removal/placement) without ``baking in" artifacts, ensuring that the rendered memory remains synchronized with the current reality.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\linewidth]{RSS/images/visual.png}
+    \caption{\textbf{Qualitative Evaluation of Appearance Field Robustness.} 
+    \textbf{(Rows 1-3) Ablation of Confidence Gating:} We compare the rendered RGB and Depth maps between our method (Left) and the baseline without gating (Right) under locomotion noise. \textbf{Without gating}, the map suffers from motion blur (ghosting) and depth discontinuities. \textbf{With our Confidence Gating}, the system actively suppresses jitter, yielding higher PSNR and lower Depth L1 errors.
+    \textbf{(Row 4) Dynamic Adaptation:} The bottom row visualizes the Appearance Field's capacity to evolve. The rendered views before and after environmental changes (e.g., object relocation on the table/shelf) show that the field successfully updates its semantic and geometric memory while maintaining visual consistency.}
+    \label{fig:supp_jitter}
+\end{figure*}
+
+\subsubsection{Watertight Geometry for Safety}
+
+To highlight the necessity of the Geometry Field $\mathcal{F}_{geom}$, we present a comparative analysis in Fig.~\ref{fig:pclvsmesh}. The raw 3D Gaussian point cloud (Left panels), while sufficient for visual navigation, remains inherently sparse and lacks surface connectivity. This ``porosity'' renders it unreliable for precise collision detection, as a robotic arm could theoretically pass through the gaps between centroids without triggering a collision. 
+
+In contrast, our Flow Matching module synthesizes a dense, watertight mesh (Right panels) specifically for the target object. This continuous manifold is critical for the Interaction Pose Safety (IPS) protocol, enabling rigorous signed-distance computations. Furthermore, Fig.~\ref{fig:meshes} demonstrates the generalization of our geometry generation across a diverse set of household objects, ensuring that robust physical proxies are available for interaction regardless of object category.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.95\linewidth]{RSS/images/RSS-2.png}
+    \caption{\textbf{From Sparse Perception to Safe Interaction.} Comparison between the raw environmental point cloud and the generated Geometry Field. \textbf{(Left)} The sparse 3D Gaussian centroids capture the scene context but suffer from noise and gaps (visualized with bounding boxes), making them insufficient for fine-grained safety checks. \textbf{(Right)} The corresponding watertight meshes generated by $\mathcal{F}_{geom}$. This explicit geometry reconstruction bridges the gap between visual appearance and physical solidity, providing a continuous surface for valid kinematic verification.}
+    \label{fig:pclvsmesh}
+    
+    \vspace{0.2cm}
+
+    \includegraphics[width=0.95\linewidth]{RSS/images/MESHES.png}
+    \caption{\textbf{Gallery of Generated Interactive Geometries.} A collection of watertight meshes generated by our Flow Matching model during real-world experiments. The system generalizes across rigid appliances (e.g., washing machines, routers), furniture (e.g., chairs, tables), and semi-rigid objects (e.g., pillows). These assets possess the manifold quality and scale consistency required for the Interaction Pose Safety (IPS) check.}
+    \label{fig:meshes}
+\end{figure*}
+
+\subsection{Dynamic Adaptation Sequence (Resolution of P2)}
+Fig.~\ref{fig:supp_sequence} presents a step-by-step breakdown of the Interaction Adaptation Mechanism in a real-world "Sofa Relocation" scenario.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=\textwidth]{RSS/images/change_manga.png}
+    \caption{\textbf{Chronological visualization of the Memory Evolution Loop.} 
+    \textbf{(a) Detection:} Upon arrival, the discrepancy score $\mathcal{D}$ spikes (red curve) as the robot observes the sofa is missing from its expected location.
+    \textbf{(b) Active Scan:} The robot executes an active gaze maneuver, rotating its head to sweep the local area for the relocated object.
+    \textbf{(c) Map Update:} The Spatial Field is locally updated; the old "Sofa" node is removed, and a new node is instantiated at the detected coordinates.
+    \textbf{(d) Re-planning:} With the map rectified, the planner generates a new feasible trajectory (green path) to the sofa's actual location.}
+    \label{fig:supp_sequence}
+\end{figure*}
+
+
+
+\subsection{Real-World Deployment Showcase}
+\label{sec:real_world_showcase}
+
+To demonstrate the versatility and robustness of the Multi-modal Interactive Field (MIF) in unstructured environments, we deployed the system on a Unitree G1 humanoid for a series of long-horizon tasks. As shown in Fig.~\ref{fig:showoff}, the experiments cover diverse scenarios ranging from social compliance to dynamic adaptation and mobile manipulation.
+
+\noindent\textbf{Social Navigation (Row 1).} The robot patrols a corridor and correctly identifies a human. It halts at a socially compliant distance ($1.5\,\text{m}$), which triggers an auxiliary interaction module to execute a greeting gesture (waving) before resuming its path, demonstrating the integration of semantic detection with the local planner.
+
+\noindent\textbf{Cluttered Navigation (Row 2).} Navigate through the narrow office passageway to the target area. The robot successfully traverses the constricted opening and enters the workspace without collision, validating the precision of the Appearance Field $\mathcal{F}_{app}$.
+
+\noindent\textbf{Dynamic Adaptation (Rows 3-5).} We conducted a comparative study on the "Sofa Relocation" scenario (Problem P2). While the baseline (HOV-SG, Row 5) fails to update the spatial graph and collides with the displaced sofa, our MIF system (Row 4) detects the discrepancy, triggers the memory evolution loop, and re-plans a safe trajectory.
+
+\noindent\textbf{Mobile Manipulation (Row 6).} Finally, we demonstrate a service task in an elderly care setting. The robot navigates to a fridge, retrieves a drink, and hands it to a user. This verifies the watertight quality of the Geometry Field $\mathcal{F}_{geom}$, which ensures safe interaction proximity.
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.9\linewidth]{RSS/images/showoff.jpg}
+    \caption{\textbf{Real-World Deployment Showcase.} We demonstrate: 
+\textbf{Row 1:} Social patrol with compliant human interaction (waving at $1.5\,\text{m}$). 
+\textbf{Row 2:} Collision-free navigation through a narrow office passageway. 
+\textbf{Rows 3-5:} Dynamic adaptation to layout changes (``\textit{Bypass the sofa}''). Unlike the baseline which collides (Row 5), our method detects the shift and re-plans safely (Row 4). 
+\textbf{Row 6:} Long-horizon service task (fetching a drink) demonstrating precise mobile manipulation.}
+    \label{fig:showoff}
+\end{figure*}
+
+
+\clearpage
+\subsection*{I\enspace Confidence $C_i$: Principle, Purpose \& Robustness%
+  \hfill{\footnotesize\color{gray}5b5U · ijfV · cV85 · DcYV}}
+
+$C_i$ approximates the inverse posterior entropy $H(P(\boldsymbol{\theta}_i | Z))$ via two tractable proxies: gradient magnitude (convergence indicator) and opacity (observational constraint indicator)—high $C_i$ signals low-entropy, well-constrained 3DGS primitives (属性+包含 C). 数学形式，加权梯度赋值（用什么算的）和 sigmoid,sigmoid 
+
+4.
+未澄清的符号与引文书楼，代码公开，清晰简化术语,双盲，引文按顺序
+\paragraph{Approximate Bayesian Inductive Bias.}
+$C_i$ approximates a per-primitive reliability posterior via two globally-normalized
+signals: $g_{n,i}=g_i/\bar{g}$ (gradient uncertainty proxy — high under
+contradictory inter-frame supervision, decays after convergence)
+and $\alpha_{n,i}=\alpha_i/\bar{\alpha}$ (structural existence prior).
+Three inductive biases are enforced:
+\textbf{(1)}~monotonicity $C_i\!\downarrow$ as $g_{n,i}\!\uparrow$;
+\textbf{(2)}~boundaries $C_i\!\to\!1$ at $g_{n,i}\!=\!0$,
+$C_i\!\to\!0.5$ (max-entropy neutral) at $\alpha_{n,i}\!\to\!0$;
+\textbf{(3)}~global adaptation via mean normalization — no fixed thresholds
+across scenes or training stages.
+
+\paragraph{Multi-Stage Noise Suppression.}
+$C_i$ propagates through three SLAM stages:
+\textbf{(i)~LGBA:} low-$C_i$ primitives down-weighted in $\mathcal{L}_\text{photo}$,
+preventing jitter-corrupted gradients from biasing joint pose--map optimization;
+\textbf{(ii)~Global BA} (post-loop-closure): high-$C_i$ landmarks anchor the factor
+graph, suppressing cumulative drift and ensuring map consistency;
+\textbf{(iii)~Fine Pose Refinement:} confidence-modulated warping loss prioritizes
+geometrically stable regions despite severe viewpoint oscillation.
+
+\paragraph{Appearance Field Quality Under Humanoid Locomotion.}
+\vspace{-3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lc cccc c}
+\toprule
+\textbf{Method} & \textbf{Online}
+  & \textbf{S-PSNR↑} & \textbf{S-SSIM↑}
+  & \textbf{F-PSNR↑} & \textbf{F-SSIM↑}
+  & \textbf{FPR↓}\\
+\midrule
+w/o Confidence       & ---           & 28.4 & 0.88 & 21.6 & 0.72 & 46.5\%\\
+Deblur-GS {[}ECCV'24{]} & \texttimes & 28.9 & 0.89 & 22.3 & 0.73 & 41.2\%\\
+PUP-3DGS  {[}CVPR'25{]} & \texttimes & 29.1 & 0.89 & 23.8 & 0.76 & 38.7\%\\
+\textbf{MIF $C_i$ (Ours)} & \checkmark
+  & \textbf{31.2} & \textbf{0.93}
+  & \textbf{29.8} & \textbf{0.89} & \textbf{4.2\%}\\
+\bottomrule
+\end{tabular}}
+\vspace{1pt}
+
+{\scriptsize\itshape
+S/F = Slow\,/\,Fast walk.
+Deblur-GS F-PSNR\,22.3\,$\approx$\,21.6 (w/o), confirming it addresses only
+\emph{intra}-frame shutter blur, not \emph{inter}-frame gait jitter.
+PUP-3DGS offline FPR\,38.7\% vs.\ MIF\,4.2\%; MIF is the only
+\emph{online} mechanism maintaining high quality at both speeds.}
+
+\paragraph{Hyperparameter Sensitivity ($\beta\!\times\!\gamma$ Grid, Fast Walk
+  PSNR\,dB\,/\,FPR).}
+\vspace{-3pt}
+\begin{center}\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{c|ccc}
+\toprule
+$\bm{\beta}\,\backslash\,\bm{\gamma}$ & $0.5$ & $2.0$\,(def.) & $4.0$\\
+\midrule
+2.0 & 29.3\,/\,7.1\% & 29.1\,/\,6.8\% & 29.0\,/\,7.4\%\\
+\textbf{5.0} & 29.5\,/\,5.1\%
+  & \textbf{29.8\,/\,4.2\%} & 29.6\,/\,4.8\%\\
+8.0 & 29.4\,/\,5.4\% & 29.7\,/\,4.5\% & 29.5\,/\,4.9\%\\
+\bottomrule
+\end{tabular}
+\end{center}
+\vspace{1pt}
+{\scriptsize\itshape
+Across $\beta\!\in\![2,8]$, $\gamma\!\in\![0.5,4]$:
+PSNR varies ${<}\,0.5$\,dB, FPR varies ${<}\,3\%$ —
+robust without scene-specific tuning.}
+\end{document}

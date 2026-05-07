@@ -1,0 +1,210 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{makecell}
+\usepackage{tabularx}
+\usepackage[numbers]{natbib}
+\usepackage{multicol}
+\usepackage[bookmarks=true]{hyperref}
+\usepackage{cuted}
+\usepackage{caption}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{xcolor}
+\bibliographystyle{unsrt}
+
+% \setlength{\textfloatsep}{2pt plus 2pt minus 2pt}
+% \setlength{\intextsep}{2pt plus 2pt minus 2pt}
+% \setlength{\abovecaptionskip}{2pt}
+% \setlength{\belowcaptionskip}{2pt}
+
+\setlength{\textfloatsep}{1pt plus 1pt minus 1pt}
+\setlength{\intextsep}{1pt plus 1pt minus 1pt}
+\setlength{\abovecaptionskip}{1pt}
+\setlength{\belowcaptionskip}{1pt}
+
+\pdfinfo{
+   /Author (Author Names Omitted)
+   /Title  (MIF-Humanoid Rebuttal)
+   /Subject (Robotics)
+}
+
+\begin{document}
+
+
+\twocolumn[
+\begin{center}
+    \textbf{\Large Rebuttal for Paper-ID 256}
+\end{center}
+\vspace{-5pt}
+]
+
+The authors thank the Area Chair and the reviewers for constructive feedback. Below we address the key concerns.
+
+% \textbf{1) Contribution (novelty/positioning).}
+% Our claim is not that we achieve substantial novel improvements in each of the semantic 3DGS, scene graphs, feature compression, or object-level reconstruction. The contribution is their \emph{humanoid-oriented integration} for navigation:
+% (1) a confidence-gated appearance field that reduces gait-induced artifacts during online semantic 3DGS mapping,
+% (2) a discrepancy-triggered spatial field that updates only locally inconsistent regions under scene changes,
+% (3) a geometry field that performs task-driven active view selection for safer interaction, and
+% (4) we validate the integrated system on a real humanoid platform in dynamic environments. 
+\textbf{1) Contribution (novelty/positioning).}
+Our contribution is the \emph{humanoid-oriented integration} of these components for the new manipulation-safety awared navigation task: (1) confidence-gated appearance field reducing gait artifacts in online semantic 3DGS, (2) discrepancy-triggered spatial field updating only inconsistent regions, (3) geometry field with manipulation-driven active view selection and interaction pose selection, and (4) the system is deployable according to memory usage and latency, and we do validation on a real humanoid in dynamic environments.
+
+
+
+
+\textbf{2) Additional evidence on the main disputed points.}
+
+% \textbf{Other 3DGS baselines and confidence formulation.}
+% We added comparisons with Deblur-GS and PUP-3DGS when the robot is operated in slow and fast-walk conditions, as shown in Table~\ref{tab:conf}.
+% $C_i$ is computed from each Gaussian's normalized optimization instability (weighted gradient magnitude of primitive attributes, including 3D position, scale/rotation, color, and opacity): gait-corrupted primitives remain persistently high-gradient across training, while static textured boundaries converge, so low-$C_i$ primitives are downweighted in rendering and object reliability estimation. The primary noise source targeted by $C_i$ is locomotion instability from humanoid motion, as well as local pose estimation errors in SLAM.
+
+\textbf{Other 3DGS baselines and confidence formulation.}
+We added comparisons with Deblur-GS and PUP-3DGS under slow-walk and fast-walk conditions (Table~\ref{tab:conf}). Different from these methods, $C_i$ is computed from each Gaussian's gradient magnitude (weighted across position, scale/rotation, color) and opacity, both normalized by global means.
+ Gait-corrupted primitives exhibit persistently high gradients across training, while static high-texture boundaries converge naturally. Leveraging this, $C_i$ modulates both mapping and tracking: low-confidence primitives receive higher learning rates for refinement in mapping, while being masked in photometric pose optimization to prevent noise propagation. The primary noise sources targeted by $C_i$ are locomotion instability from humanoid motion and local pose errors in SLAM.
+
+
+% Rendered views from the appearance field provide more robust object detection (YOLO + SAM) and spatial relation extraction (GPT-4o) by reducing gait-induced artifacts for better scene graph construction.(Table~\ref{tab:render}).
+
+
+\begin{table}[h]
+\centering
+\caption{ Rendering results under slow (S-) and fast (F-) walk.}
+\label{tab:conf}
+% 稍微收紧列间距，防止等比缩放时字体变得过小
+\setlength{\tabcolsep}{2.5pt} 
+% 自动将表格宽度缩放至当前单栏的宽度 (\columnwidth)
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Method} & \textbf{S-PSNR$\uparrow$} & \textbf{S-SSIM$\uparrow$} & \textbf{F-PSNR$\uparrow$} & \textbf{F-SSIM$\uparrow$}\\
+\midrule
+w/o Confidence & 28.4 & 0.88 & 21.6 & 0.72\\
+Deblur-GS [I3D'24] & 25.14 & 0.80 & 24.67 & 0.70\\
+PUP-3DGS [CVPR'25] & 20.44 & 0.67 & 17.89 & 0.53\\
+\textbf{MIF $C_i$ (Ours)} & \textbf{31.2} & \textbf{0.93} & \textbf{29.8} & \textbf{0.89}\\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+The confidence module is also robust to hyperparameter choice: over $\beta\!\in\![2,8]$ and $\gamma\!\in\![0.5,4]$, PSNR varies by less than 0.5\,dB and FPR by less than 3\%.
+
+
+
+
+
+\textbf{Dynamic-scene baselines.}
+Our original comparison to HOV-SG was intended to expose the failure mode of static-memory methods under scene changes, not to claim superiority over all dynamic scene graph approaches. We agree that static baselines alone are insufficient and therefore added comparisons with Khronos and a periodic-rescan ConceptGraphs variant in the same non-revisiting protocol. As shown in Table~\ref{tab:dsg}, we test whether each method can update the scene graph (against changes within the environment) based on the data collected during navigation after the environment change.
+
+\begin{table}[h]
+\centering
+\caption{Change detection under non-revisiting navigation. Reloc/Remov/Addit: object relocated ($>$1.5m), removed, or added out-of-view. Robot navigates directly without revisiting.}
+\label{tab:dsg}
+\footnotesize
+\setlength{\tabcolsep}{2pt}
+\begin{tabularx}{\columnwidth}{@{} l
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Method} & \textbf{Reloc SR$\uparrow$} & \textbf{Remov SR$\uparrow$} & \textbf{Addit SR$\uparrow$}\\
+\midrule
+ConceptGraphs + Rescan & 38\% & 35\% & 12\% \\
+Khronos [RSS'24] & $\sim$18\% & 61\% & $\sim$12\% \\
+\textbf{MIF (Ours)} & \textbf{94\%} & \textbf{98\%} & \textbf{86\%} \\
+\bottomrule
+\end{tabularx}
+{\tiny\raggedright $^*$Two-session protocol: initial mapping, then scene changes, followed by change detection via scene graph comparison. The robot during navigation in two session does not ensure exactly the same trajectory.\par}
+\vspace{-3mm}
+\end{table}
+
+\textbf{$\mathcal{D}$-Score \& threshold selection.} Under gait noise, $\mathcal{D}$ remains concentrated in a low-value, low-variance regime (mean $\sim$0.2, std $\sim$0.05), while real changes form a separable high-value mode (mean $\sim$0.6, std $\sim$0.1), enabling reliable discrimination. We also report the ROC-based selection of change trigger threshold $\tau$ in Table~\ref{tab:tau}; $\tau=0.45$ maximizes F1 and was selected from this quantitative evaluation rather than manual tuning.
+
+\begin{table}[h]
+\centering
+\caption{ROC-based threshold selection in real scenarios.}
+\label{tab:tau}
+\footnotesize
+\begin{tabularx}{\columnwidth}{@{}
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X
+>{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Threshold $\bm{\tau}$} & \textbf{True Positive Rate$\uparrow$} & \textbf{False Positive Rate$\downarrow$} & \textbf{F1$\uparrow$}\\
+\midrule
+0.25 & 99.2\% & 18.7\% & 0.817\\
+0.35 & 97.8\% & 9.3\% & 0.893\\
+\textbf{0.45 (Ours)} & \textbf{95.1\%} & \textbf{4.2\%} & \textbf{0.934}\\
+0.55 & 89.6\% & 1.8\% & 0.913\\
+0.65 & 78.3\% & 0.7\% & 0.866\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{3) Other clarifications requested by reviewers.}
+
+\textbf{Viewpoint utility $Q(k)$.}
+We agree the term was imprecise. $Q(k)$ is not information-theoretic but a \emph{task-local geometric observation utility} for manipulation safety. Candidate views are sampled on a hemisphere around the object, and $Q(k)$ ranks them by distance, foveal alignment, and high-confidence Gaussian density to maximize interaction surface observability.
+
+\textbf{Semantic compression.}
+Semantic compression is not claimed as a standalone novelty. It is an efficiency-enabling choice that preserves task-relevant semantics while making online deployment practical, as shown in Table~\ref{tab:semantic_embedding}.
+
+\begin{table}[h]
+\centering
+\caption{Semantic localization under slow (S-) and fast (F-) walk conditions, memory usage, and latency.}
+\label{tab:semantic_embedding}
+\setlength{\tabcolsep}{3pt} % 收紧列间距
+\resizebox{\columnwidth}{!}{% 自动缩放至单栏宽度
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{VRAM$\downarrow$\,(GB)} & \textbf{Latency$\downarrow$\,(s)} & \textbf{S-SR$\uparrow$} & \textbf{F-SR$\uparrow$}\\
+\midrule
+LangSplat [CVPR'24] & 18.45 & 2.3 & 95\% & 72\%\\
+LatentBKI-64D [RA-L'25] & 23.5 & 7.1 & \textbf{98\%} & 74\%\\
+FeatSplat-32D [ECCV'24] & 4.8 & 3.2 & 81\% & 59\%\\
+\textbf{MIF 64D (Ours)} & 18.0 & 4.6 & 92\% & \textbf{88\%}\\
+\textbf{MIF 32D (Ours)} & \textbf{$<$4.0} & \textbf{1.6} & 90\% & 86\%\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\textbf{Rendered views for the spatial field.}
+The appearance field renders stabilized views that reduce gait-induced artifacts, enabling more robust object detection (YOLO + SAM) and spatial relation extraction (GPT-4o) for scene graph construction (Table~\ref{tab:render}). The discrepancy score compares the node position, semantics, and relation sets of the local and global graph to trigger local updates when $\mathcal{D}>\tau$.
+
+\begin{table}[h]
+\centering
+\caption{Semantic object localization on scene graphs constructed from rendered vs. raw frames.}
+
+\label{tab:render}
+\setlength{\tabcolsep}{4pt} % 稍微收紧列间距，确保第一列不折行
+\footnotesize % 严格保持和之前表格完全一致的字号
+% 彻底移除 resizebox，使用 tabularx 强制总宽度为 \columnwidth
+% 第一列用 l (左对齐)，后三列用 X (居中且自动均分剩余宽度)
+% @{} 用于去除左右两端多余空白，确保边缘完美贴合题注
+\begin{tabularx}{\columnwidth}{@{} l 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Input Source} & \textbf{Recall$\uparrow$} & \textbf{Precision$\uparrow$} & \textbf{mAP$\uparrow$}\\
+\midrule
+Raw frames (Slow) & 0.87 & 0.91 & 0.84\\
+Raw frames (Fast) & 0.61 & 0.79 & 0.58\\
+\textbf{MIF Rendered (Slow)} & \textbf{0.94} & \textbf{0.95} & \textbf{0.93}\\
+\textbf{MIF Rendered (Fast)} & \textbf{0.92} & \textbf{0.94} & \textbf{0.91}\\
+Static camera (Ref.) & $\sim$1.00 & $\sim$1.00 & $\sim$1.00\\
+\bottomrule
+\end{tabularx}
+
+\end{table}
+
+\textbf{Others.}
+Moreover, we will:
+(1) expand related work on dynamic scene graphs, confidence in 3DGS, motion-deblurring 3DGS, and semantic feature distillation and
+(2) clarify all notations and variables.
+(3) release the codes for both the algorithm and the whole ROS system upon acceptance. 
+\end{document}

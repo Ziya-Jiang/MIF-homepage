@@ -1,0 +1,227 @@
+\documentclass[conference]{IEEEtran}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{booktabs}
+\usepackage{makecell} 
+\usepackage{tabularx}
+\usepackage[numbers]{natbib}
+\usepackage{multicol}
+\usepackage[bookmarks=true]{hyperref}
+\usepackage{cuted}
+\usepackage{caption}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\bibliographystyle{unsrt}
+\usepackage{xcolor}
+% 减小表格与文字的间距
+\setlength{\textfloatsep}{8pt plus 2pt minus 2pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{4pt}
+\newcommand{\COMMENT}[1]{\hfill \textcolor{gray}{$\triangleright$ #1}}
+
+\pdfinfo{
+   /Author (Author Names Omitted)
+   /Title  (MIF-Humanoid Rebuttal)
+   /Subject (Robotics)
+}
+
+\begin{document}
+
+% 使用 \twocolumn[...] 来实现跨双栏的完美居中
+\twocolumn[
+\begin{center}
+    \textbf{\Large Rebuttal for Paper-ID 256}
+    \vspace{4mm}
+\end{center}
+]
+
+% ==========================================
+% GENERAL RESPONSE
+% ==========================================
+We sincerely thank the reviewers for their thorough and constructive evaluations. We fully acknowledge the identified shortcomings and address them below. Part I consolidates core questions raised by multiple reviewers into unified, in-depth responses; Part II addresses questions unique to individual reviewers; Parts III and IV summarize supplementary experiments and revision commitments.
+
+
+\textbf{Confidence Estimation Module.} To estimate the confidence $C_i$ for each primitive (mean, color, semantics, covariance, opacity, spatial position, etc.) in real-time, we design a differentiable module that approximates ideal Bayesian updates through three constraints: monotonicity, boundary conditions, and global adaptivity, utilizing globally normalized gradient magnitude $g_{\text{n},i} = g_i / \bar{g}$ and opacity $\alpha_{\text{n},i} = \alpha_i / \bar{\alpha}$. Specifically, we compute the per-attribute weighted gradient magnitude $g_i$ for each Gaussian, normalize gradients and opacity using global statistics (mean across all primitives), where $\sigma$ is a sigmoid function smoothly interpolating between gradient and opacity adjustment terms.
+
+For discriminating gait jitter from high-texture boundaries: the former receives contradictory supervision signals preventing Gaussian convergence, keeping $g_i$ persistently high during training, while static high-texture regions show high $g_i$ only initially, naturally decaying as optimization converges. Furthermore, we perform SLAM keyframe selection and joint pose-map optimization based on information gain (Shannon mutual information) reflected by confidence.
+
+\textbf{Baseline Comparisons.} To compare with different confidence approaches in 3DGS (PUP-GS) and motion blur methods (Deblur-GS), extended experiments are shown in Table~\ref{1}, with hyperparameter sensitivity analysis in Table~\ref{2}.
+
+\begin{table}[h]
+\centering
+\caption{Comparison under slow-walk (S-) and fast-walk (F-) conditions. PUP-3DGS* denotes out-of-memory failure in online mode.}
+\label{1}
+\setlength{\tabcolsep}{3.5pt} % 稍微收紧列间距以适应单栏
+\footnotesize % 统一设置字号，确保两个表格字体完全一致
+\begin{tabular}{lccccc} % 修正为6列
+\toprule
+\textbf{Method} & \textbf{S-PSNR$\uparrow$} & \textbf{S-SSIM$\uparrow$} & \textbf{F-PSNR$\uparrow$} & \textbf{F-SSIM$\uparrow$} & \textbf{FPR$\downarrow$}\\
+\midrule
+w/o Confidence & 28.4 & 0.88 & 21.6 & 0.72 & 46.5\%\\
+Deblur-GS & 25.14 & 0.80 & 24.67 & 0.70 & 51.4\%\\
+PUP-3DGS & 20.44 & 0.67 & 17.89 & 0.53 & 67.5\%\\
+PUP-3DGS*& -- & -- & -- & -- & --\\
+\textbf{MIF $C_i$ (Ours)} & \textbf{31.2} & \textbf{0.93} & \textbf{29.8} & \textbf{0.89} & \textbf{4.2\%}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\begin{table}[h]
+\centering
+\caption{\small Over the wide range $\beta\in[2,8]$ and $\gamma\in[0.5,4]$, PSNR varies by $<0.5$\,dB and FPR by $<3\%$, demonstrating robustness to hyperparameter choice without fine-tuning.}
+\label{2}
+\footnotesize % 严格保持和第一个表格完全一致的字号
+% 使用 tabularx 强制宽度为 \columnwidth
+% >{\centering\arraybackslash}X 表示该列自动分配等分宽度，且内容居中
+\begin{tabularx}{\columnwidth}{ 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+}
+\toprule
+$\bm{\beta} \backslash \bm{\gamma}$ & \textbf{0.5} & \textbf{2.0 (default)} & \textbf{4.0}\\
+\midrule
+\textbf{2.0} & 29.3 / 7.1\% & 29.1 / 6.8\% & 29.0 / 7.4\%\\
+\textbf{5.0} & 29.5 / 5.1\% & \textbf{29.8 / 4.2\%} & 29.6 / 4.8\%\\
+\textbf{8.0} & 29.4 / 5.4\% & 29.7 / 4.5\% & 29.5 / 4.9\%\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\textbf{Dynamic Scene Graph Baselines.} To supplement dynamic scene graph baselines, we provide detailed comparisons with Khronos (RSS-24) and a periodic mapping variant of Concept-graph (Table~\ref{3}), offering fair evaluation for change detection.
+
+\begin{table}[h]
+\centering
+\caption{Change detection under non-revisiting navigation. Protocol: 5-min mapping, object relocated >1.5m out-of-view, robot navigates directly without revisiting old location. Khronos requires incidental loop closure (~43s), while MIF detects changes via continuous monitoring (<2s).}
+\label{3}
+\setlength{\tabcolsep}{2pt} % 极限收紧内部列间距，给第一列留足空间
+\footnotesize % 严格保持和之前表格完全一致的字号
+% 强制表格总宽度等于 \columnwidth (即题注的宽度)
+% 左右两端的 @{} 用于去除表格最外侧的隐形留白，确保和题注的左右边缘绝对对齐
+\begin{tabularx}{\columnwidth}{@{} l 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Method} & \textbf{Reloc SR$\uparrow$} & \textbf{Remov SR$\uparrow$} & \textbf{Addit SR$\uparrow$} & \textbf{Latency$\downarrow$}\\
+\midrule
+HOV-SG (static) & 12\% & 10\% & 0\% & N/A\\
+ConceptGraphs (static) & 15\% & 12\% & 0\% & N/A\\
+ConceptGraphs + Naive Rescan & 38\% & 35\% & 12\% & $\sim$30\,s\\
+Khronos [RSS'24] & $\sim$18\% & 61\% & $\sim$12\% & $\sim$43\,s\\
+\textbf{MIF (Ours)} & \textbf{94\%} & \textbf{98\%} & \textbf{86\%} & \textbf{$<$2\,s}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Experiments demonstrate that Concept-graph, affected by gait oscillations, cannot distinguish gait noise from real changes, frequently triggering false positives.
+
+\textbf{Information Gain and Viewpoint Selection.} $Q(k)$ is not strictly information gain but rather a geometric observation utility function for manipulation safety. Candidate views are generated by uniformly discretizing a hemisphere centered at object centroid $\mathbf{c}_i$ with radius $r = 1.2$ m at $\Delta\phi = 30°, \Delta\theta = 20°$, yielding approximately 36 candidate poses. $Q(k)$ jointly considers distance, foveal alignment, and geometric anchor density to compute the local viewpoint maximizing geometric fidelity of the target object's interaction surface.
+
+Additionally, our confidence-based keyframe selection in 3DGS-SLAM (Shannon mutual information) shares the information gain objective with methods like FisherRF and BayesRays.
+
+\textbf{Semantic Embedding Compression}. Compressing semantic embeddings into spatial representations like 3DGS is an established technique (LangSplat, Feature Splatting, LatentBKI for voxels). Our contribution lies in reducing temporal and spatial overhead of semantic embedding while introducing confidence-guided feature distillation rendering to improve robustness against gait noise.
+
+Specifically, inspired by Feature Splatting, we employ a lightweight two-layer MLP trained end-to-end with L2 reconstruction loss. To demonstrate this compression not only reduces memory and inference time but retains sufficient information for downstream tasks, we compare with the above methods and our own variants (different compressed feature dimensions) on semantic localization tasks (Table~\ref{4}).
+
+\begin{table}[h]
+\centering
+\caption{\small LatentBKI cannot render views; comparison is limited to semantic query success rate (SR) and memory efficiency. S/F = Slow/Fast walk. Feature distillation in MIF 32D drastically reduces VRAM and latency while preserving robustness against gait noise.}
+\label{4}
+\setlength{\tabcolsep}{3pt} % 收紧列间距
+\resizebox{\columnwidth}{!}{% 自动缩放至单栏宽度
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{VRAM$\downarrow$\,(GB)} & \textbf{Latency$\downarrow$\,(s)} & \textbf{S-SR$\uparrow$} & \textbf{F-SR$\uparrow$}\\
+\midrule
+LangSplat [CVPR'24] & 18.45 & 2.3 & 95\% & 72\%\\
+LangSplatV2 [CVPR'24] & \oom & -- & -- & --\\
+LatentBKI-64D [RA-L'25] & 23.5 & 7.1 & \textbf{98\%} & 74\%\\
+FeatSplat-32D [ECCV'24] & 4.8 & 3.2 & 81\% & 59\%\\
+\textbf{MIF 512D\,/\,128D} & \oom & -- & -- & --\\
+\textbf{MIF 64D (Ours)} & 18.0 & 4.6 & 92\% & \textbf{88\%}\\
+\textbf{MIF 32D (Ours)} & \textbf{$<$4.0} & \textbf{1.6} & 90\% & 86\%\\
+\bottomrule
+\end{tabular}
+}
+
+\end{table}
+
+\textbf{Change Detection Threshold.} Under gait noise, the difference score $D$ exhibits low mean and small variance, while real changes show high mean with clear bimodal distribution for discrimination. The trigger threshold $\tau$ is determined via ROC analysis in real scenarios (Table~\ref{5}).
+
+\begin{table}[h]
+\centering
+\caption{\small The F1 score is maximized at $\tau=0.45$ (0.934), demonstrating that the threshold is determined by quantitative evidence---effectively balancing true positive detection against gait-noise false alarms---rather than arbitrary choice.}
+\label{5}
+\footnotesize % 严格保持和之前表格完全一致的字号
+% 彻底移除 resizebox，使用 tabularx 强制总宽度为 \columnwidth
+% 4列全部使用 X 居中对齐并自动均分宽度
+% @{} 用于去除左右两端多余空白，确保边缘完美贴合题注
+\begin{tabularx}{\columnwidth}{@{} 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Threshold $\bm{\tau}$} & \textbf{TPR$\uparrow$} & \textbf{FPR$\downarrow$} & \textbf{F1$\uparrow$}\\
+\midrule
+0.25 & 99.2\% & 18.7\% & 0.817\\
+0.35 & 97.8\% & 9.3\% & 0.893\\
+\textbf{0.45 (Ours)} & \textbf{95.1\%} & \textbf{4.2\%} & \textbf{0.934}\\
+0.55 & 89.6\% & 1.8\% & 0.913\\
+0.65 & 78.3\% & 0.7\% & 0.866\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+When $D > \tau$, the system executes scene update steps. Regarding the reviewer's concern about computing object reliability scores via simple averaging (ignoring view-dependence), opacity-weighted averaging may be a better alternative, which we propose as future work.
+
+\textbf{Inter-field synergy.} 
+$F_{app}$ couples confidence into rendering for noise-aware accumulation; $F_{spat}$ uses confidence-gated detection to suppress VLM hallucinations; $F_{geo}$ incorporates confidence for viewpoint selection. Rendered views enable robust scene graph construction (Table~\ref{6}), while spatial relations from $F_{spat}$ complement CLIP's semantic understanding.
+
+textbf{Inter-field synergy.} 
+The three fields interact synergistically: $F_{app}$ couples confidence $C_i$ into rendering for noise-aware feature accumulation; $F_{spat}$ uses confidence-gated difference detection to suppress VLM hallucinations; $F_{geo}$ incorporates confidence into viewpoint selection for reliable geometric reconstruction. Rendered views from $F_{app}$ provide stable inputs for scene graph construction (Table~\ref{6}), while $F_{geo}$ adjusts interaction viewpoints when subtle changes fail to trigger updates, and $F_{spat}$ provides spatial relations that CLIP features alone cannot capture.
+
+\textbf{Field Contributions and Interactions.} The core contribution of appearance field $F_{app}$ is coupling the online differentiable confidence scalar $C_i$ into 3DGS rendering integrals, enabling noise-aware spatial accumulation of Gaussian attributes (semantic features, colors). The spatial field $F_{spat}$ (including scene graph and dynamic update mechanism) proposes confidence-based difference detection using reliability scores as gating, effectively suppressing VLM hallucinations and improving existing dynamic scene graphs' noise resistance.
+
+The geometric field $F_{geo}$ incorporates appearance field confidence into viewpoint selection, enabling active perception for geometric reconstruction and providing reliable visual conditions for flow matching. Additionally, inter-field interaction logic enhancing system robustness is a major contribution.
+
+Specifically, the appearance field smoothly interpolates SLAM-estimated poses, generating stable views via 3DGS rendering with less motion blur than raw observations, providing more robust support for spatial topology (edges as spatial relations, nodes as object semantics and positions) required by the spatial field (Table~\ref{6}).
+
+\begin{table}[h]
+\centering
+\caption{Semantic embedding methods under gait noise. LatentBKI (voxel-based) cannot render views. Dimension reduction (512D→32D) cuts memory 4.5× and latency 2.9× while maintaining robustness (F-SR 86\% vs. baselines' 59-74\%).}
+\label{6}
+\setlength{\tabcolsep}{4pt} % 稍微收紧列间距，确保第一列不折行
+\footnotesize % 严格保持和之前表格完全一致的字号
+% 彻底移除 resizebox，使用 tabularx 强制总宽度为 \columnwidth
+% 第一列用 l (左对齐)，后三列用 X (居中且自动均分剩余宽度)
+% @{} 用于去除左右两端多余空白，确保边缘完美贴合题注
+\begin{tabularx}{\columnwidth}{@{} l 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X 
+    >{\centering\arraybackslash}X @{}}
+\toprule
+\textbf{Input Source} & \textbf{Recall$\uparrow$} & \textbf{Precision$\uparrow$} & \textbf{mAP$\uparrow$}\\
+\midrule
+Raw frames (Slow) & 0.87 & 0.91 & 0.84\\
+Raw frames (Fast) & 0.61 & 0.79 & 0.58\\
+\textbf{MIF Rendered (Slow)} & \textbf{0.94} & \textbf{0.95} & \textbf{0.93}\\
+\textbf{MIF Rendered (Fast)} & \textbf{0.92} & \textbf{0.94} & \textbf{0.91}\\
+Static camera (Ref.) & $\sim$1.00 & $\sim$1.00 & $\sim$1.00\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+When subtle environmental changes fail to trigger scene updates via $D$, the geometric field adjusts interaction viewpoints for changed objects via IPS computation to ensure safety. During semantic localization, we find embedded CLIP features cannot understand spatial relations (causing fuzziness), which the appearance field's spatial relations can address.
+
+\textbf{Manuscript Revisions}. In the revised manuscript, we will systematically unify mathematical notation and definitions, ensure main text self-containment, and replace overly ornate terminology with academic language. We will supplement related work comprehensively covering dynamic scene graphs, confidence-based 3DGS, motion deblurring 3DGS, and spatial feature distillation baselines, correcting all citation formatting and ordering errors.
+
+Finally, we commit to open-sourcing our code upon acceptance (control and localization ROS code already organized) and have redacted institutional logos briefly appearing in videos to strictly comply with double-blind policy.
+
+\end{document}

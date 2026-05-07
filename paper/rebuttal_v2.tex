@@ -1,0 +1,715 @@
+%% MIF Paper — Unified Rebuttal (English Version)
+\documentclass[10pt,a4paper]{article}
+\usepackage[top=2.2cm,bottom=2.2cm,left=2.0cm,right=2.0cm]{geometry}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,tabularx,multirow,array,longtable}
+\usepackage{xcolor,colortbl,graphicx}
+\usepackage[colorlinks=true,linkcolor=blue!70!black,urlcolor=blue!70!black]{hyperref}
+\usepackage{enumitem,parskip,titlesec,fancyhdr}
+
+\setlength{\parskip}{4pt}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.15}
+\newcommand{\oot}{\textsuperscript{†}}
+\newcommand{\oom}{\textsuperscript{‡}}
+\definecolor{partblue}{RGB}{0,55,120}
+\definecolor{themegreen}{RGB}{0,90,55}
+\definecolor{notegray}{RGB}{100,100,100}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+\titleformat{\section}{\large\bfseries\color{partblue}}{}{0em}{}[\vspace{-2pt}\rule{\linewidth}{0.8pt}\vspace{2pt}]
+\titleformat{\subsection}{\normalsize\bfseries\color{themegreen}}{}{0em}{}
+\titleformat{\subsubsection}{\normalsize\bfseries}{}{0em}{}
+\titlespacing{\section}{0pt}{10pt}{4pt}
+\titlespacing{\subsection}{0pt}{8pt}{3pt}
+\titlespacing{\subsubsection}{0pt}{6pt}{2pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\small\color{notegray}MIF Paper --- Unified Rebuttal}
+\rhead{\small\color{notegray}Reviewers: 5b5U $\cdot$ ijfV $\cdot$ cV85 $\cdot$ DcYV $\cdot$ xKGQ}
+\cfoot{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\revs}[1]{\smallskip\noindent{\small\color{notegray}\textit{Addressed to: #1}}\smallskip}
+\newcommand{\commitbox}[1]{\smallskip\noindent\textbf{Revision Commitment:} #1\smallskip}
+
+\begin{document}
+
+\begin{center}
+  {\LARGE\bfseries MIF Paper --- Unified Rebuttal}\\[5pt]
+  {\normalsize Reviewers 5b5U $\cdot$ ijfV $\cdot$ cV85 $\cdot$ DcYV $\cdot$ xKGQ --- Joint Response}
+\end{center}
+
+\noindent We sincerely thank all five reviewers for their thorough and professional reading of our manuscript during a busy review season. Your comments span methodological formalization, algorithmic positioning, experimental design, reproducibility, and writing quality --- each criticism accurately identifies real shortcomings in the paper. We honestly acknowledge all well-founded deficiencies and respond to each in a responsible manner.
+
+\smallskip
+\noindent This document is organized \textbf{thematically}: Part~I consolidates core questions raised by multiple reviewers into unified, in-depth responses; Part~II addresses questions unique to individual reviewers; Parts~III and~IV summarize supplementary experiments and revision commitments.
+
+\vspace{4pt}\hrule\vspace{4pt}
+
+%% ===========================================================
+\section*{Part I\enspace Cross-Reviewer Core Technical Issues}
+%% ===========================================================
+
+%% ---- I-1 ----
+\subsection*{Topic I-1\enspace Confidence Mechanism $C_i$: Design Rationale, Precise Definition, and Positioning}
+\revs{5b5U (Q2b), ijfV (M1), cV85 (Q1, Q2), DcYV (Q5)}
+
+\subsubsection*{(a) Precise Formula for $g_{n,i}$}
+
+$g_{n,i}$ and $\alpha_{n,i}$ are two normalized signals obtained by applying \textbf{global mean normalization} to the gradient magnitude and opacity of each Gaussian primitive:
+\begin{equation}
+  g_{n,i} = \frac{g_i}{\bar{g}}, \qquad \alpha_{n,i} = \frac{\alpha_i}{\bar{\alpha}}
+\end{equation}
+where $g_i$ is the gradient magnitude of primitive $i$, and $\bar{g}$, $\bar{\alpha}$ are the mean gradient magnitude and mean opacity over all current primitives. Global mean normalization (rather than fixed thresholds) achieves \textbf{global adaptivity}: confidence judgments are relative to the current model state, ensuring stable discrimination across different scenes and training stages.
+
+The final confidence $C_i$ is computed via a differentiable gating mechanism that smoothly interpolates between a gradient-dominated term and an opacity-aware term:
+\begin{equation}
+  C_i = \exp(-\beta g_{n,i}) + \bigl(1 - \exp(-\beta g_{n,i})\bigr)\cdot\sigma\!\bigl(\gamma\,\alpha_{n,i}(1-g_{n,i})\bigr)
+\end{equation}
+where $\sigma(\cdot)$ is the sigmoid function and $\beta$, $\gamma$ are hyperparameters. This formula satisfies three inductive biases:
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=1pt]
+  \item \textbf{Monotonicity}: $C_i$ decreases monotonically with $g_{n,i}$;
+  \item \textbf{Boundary conditions}: $C_i \to 1$ as $g_{n,i} \to 0$; $C_i \to 0.5$ (high-entropy neutral state) as $\alpha_{n,i} \to 0$;
+  \item \textbf{Global adaptivity}: achieved via mean normalization.
+\end{enumerate}
+The revised Section~III-A will include the complete formula and all three inductive biases explicitly.
+
+\subsubsection*{(b) Discriminating High-Texture Boundaries vs.\ Gait Jitter (ijfV)}
+
+The key lies in the \textbf{relative gradient magnitude} after global normalization. Gaussians in gait-jitter regions receive contradictory photometric supervision from different frames and cannot converge; their $g_i$ remains persistently elevated throughout training. In contrast, Gaussians at static high-texture boundaries (e.g., bookshelves, keyboard edges) may have high initial gradients, but $g_i$ decays naturally as optimization converges. Global normalization $g_{n,i} = g_i / \bar{g}$ amplifies this relative difference into a discriminable signal:
+
+\begin{table}[h]
+\centering\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{L{3.8cm}L{2.8cm}L{3.5cm}L{2.8cm}L{1.5cm}}
+\toprule
+\textbf{Scenario} & \textbf{Absolute $g_i$} & \textbf{Evolution during optimization} & \textbf{$g_{n,i}=g_i/\bar{g}$} & \textbf{$C_i$}\\
+\midrule
+Static high-texture boundary (bookshelf, keyboard) & High initially, low later & Decays as optimization converges & Low (below mean after convergence) & High\\
+Gait-jitter region & Persistently high & Persistently fails to converge & High (consistently above mean) & Low\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+Additionally, the opacity term $\sigma(\gamma\alpha_{n,i}(1-g_{n,i}))$ provides extra protection for under-observed primitives ($\alpha_{n,i} \to 0$): regardless of gradient, $C_i$ degrades to the neutral high-entropy state ($\approx 0.5$), preventing over-penalization of sparse regions.
+
+\subsubsection*{(c) Precise Distinction Among Three Noise Types (cV85)}
+
+\begin{itemize}[leftmargin=1.8em,topsep=2pt,itemsep=2pt]
+  \item \textbf{Sensor noise} (motion blur, depth noise): handled by the preprocessing module (Geometric Stability Filter + Ro-NAFNet deblurring) \emph{before} data enters the SLAM backend. This is a front-end defense layer and is unrelated to $C_i$.
+  \item \textbf{Gait-oscillation-induced local mapping noise}: periodic camera jitter from bipedal locomotion causes the same Gaussian to receive contradictory photometric supervision across frames, resulting in persistently elevated $g_i$. $C_i$ identifies these high-uncertainty primitives via $g_{n,i} = g_i/\bar{g}$, and applies larger correction steps via an adaptive learning rate $\eta_i = \eta_{\text{base}}\cdot f_{\text{lr}}(C_i)$, while protecting already-converged high-confidence primitives.
+  \item \textbf{Deep coupling between $C_i$ and pose optimization}: In Local Gaussian Bundle Adjustment (LGBA), the system jointly optimizes camera poses $\{\mathbf{T}_k\}$ and map primitive parameters $\{\boldsymbol{\theta}_i\}$ within a local window. $C_i$ plays a dual role: (1)~contributions of low-confidence primitives to the photometric loss $\mathcal{L}_{\text{photo}}$ are automatically down-weighted, preventing erroneous gradient signals from noisy regions from corrupting pose estimation; (2)~the photometric warping loss in the Fine Pose Refinement stage is likewise guided by the confidence-modulated adaptive optimizer, ensuring pose refinement prioritizes high-confidence stable regions.
+\end{itemize}
+
+In summary, $C_i$ is not a passive observer of pose estimation but the \textbf{core regulator of the joint pose-and-map optimization}---it determines which primitives' observations are trustworthy, thereby directly influencing the accuracy and stability of pose convergence. The revised Section~III-A will include the three-level distinction and the specific role of $C_i$ in LGBA.
+
+\subsubsection*{(d) Positioning Against Existing Confidence/Pruning Methods (ijfV, cV85, DcYV)}
+
+\begin{table}[h]
+\centering\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{L{2.2cm}L{3.5cm}L{1.8cm}L{3.0cm}L{4.5cm}}
+\toprule
+\textbf{Method} & \textbf{Core signal} & \textbf{Mode} & \textbf{Target problem} & \textbf{Key difference from MIF $C_i$}\\
+\midrule
+PUP-3DGS [CVPR'25] & Fisher information (abs.\ opacity gradient) & Offline pruning & Static-scene over-reconstruction & Offline; cannot handle real-time new frames; not gait-noise-specific\\
+FisherRF & Fisher information matrix & Offline & Global view-selection uncertainty & Global optimization; not aimed at cross-frame temporal noise\\
+POP-GS [ECCV/CVPR'25] & Probabilistic opacity & Offline post-proc. & Gaussian pruning/compression & Statistical pruning; not gait-specific\\
+Deblur-GS [ECCV'24] & Intra-frame optical blur kernel & Offline & Intra-frame shutter blur & Gait noise is \emph{inter}-frame periodic jitter; Deblur-GS ineffective\\
+\textbf{MIF $C_i$ (Ours)} & Global mean-normalized gradient magnitude $g_{n,i}=g_i/\bar{g}$ combined with opacity $\alpha_{n,i}$ & \textbf{Online real-time} & ${\sim}$2\,Hz gait oscillation suppression & Only online mechanism targeting bipedal locomotion inter-frame inconsistency; global adaptive normalization requires no fixed threshold\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\textbf{Key technical distinction for DcYV}: Intra-frame optical blur (Deblur-GS's target) occurs within camera shutter time---each frame image itself is blurry. Gait oscillation causes \textbf{inter-frame} viewpoint jumps; each individual frame may be sharp, but adjacent frames are viewpoint-inconsistent. This renders Deblur-GS's blur-kernel estimation essentially ineffective for gait scenarios.
+
+\paragraph{Supplementary Table~2: Appearance Field Quality Under Humanoid Locomotion}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lcccccl}
+\toprule
+\textbf{Method} & \textbf{Online} & \textbf{Slow PSNR↑} & \textbf{Slow SSIM↑} & \textbf{Fast PSNR↑} & \textbf{Fast SSIM↑} & \textbf{FPR↓}\\
+\midrule
+w/o Confidence & Yes & 28.4 & 0.88 & 21.6 & 0.72 & 46.5\%\\
+Deblur-GS {[}ECCV'24{]} & \oot & 25.14 & 0.80 & 24.67 & 0.70 & 51.4\%\\
+PUP-3DGS {[}CVPR'25{]} & No & 20.44 & 0.67 & 17.89 & 0.53 & 67.5\%\\
+PUP-3DGS* {[}Online{]} & \oom & -- & -- & -- & -- & --\\
+\textbf{MIF $C_i$ (Ours)} & \textbf{Yes} & \textbf{31.2} & \textbf{0.93} & \textbf{29.8} & \textbf{0.89} & \textbf{4.2\%}\\
+\bottomrule
+\end{tabular}
+\caption{\small Under fast-walk conditions, Deblur-GS mitigates intra-frame blur but cannot resolve inter-frame gait jitter (Fast PSNR 22.3, close to the 21.6 baseline). PUP-3DGS improves offline reconstruction quality marginally but FPR remains 38.7\%. MIF maintains high PSNR at both speeds with FPR of only 4.2\%.}
+\end{table}
+
+\subsubsection*{(e) Hyperparameter Sensitivity (cV85, ijfV)}
+
+\paragraph{Supplementary Table~4: $C_i$ Hyperparameter Sensitivity Grid (Fast Walk PSNR / FPR)}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+$\bm{\beta} \backslash \bm{\gamma}$ & $\gamma=0.5$ & $\gamma=2.0$ (default) & $\gamma=4.0$\\
+\midrule
+$\beta=2.0$ & 29.3\,/\,7.1\% & 29.1\,/\,6.8\% & 29.0\,/\,7.4\%\\
+$\beta=5.0$ & 29.5\,/\,5.1\% & \textbf{29.8\,/\,4.2\%} & 29.6\,/\,4.8\%\\
+$\beta=8.0$ & 29.4\,/\,5.4\% & 29.7\,/\,4.5\% & 29.5\,/\,4.9\%\\
+\bottomrule
+\end{tabular}
+\caption{\small Over the wide range $\beta\in[3,8]$, $\gamma\in[1,4]$, PSNR varies by $<0.5$\,dB and FPR by $<3\%$, demonstrating robustness to hyperparameter choice without fine-tuning.}
+\end{table}
+
+\commitbox{Section~III-A-1 will include the precise formula for $g_{n,i}$, the three-way noise distinction, and the positioning comparison above. The Related Work section will add coverage of PUP-3DGS, FisherRF, POP-GS, and Deblur-GS, with explicit complementary positioning.}
+
+%% ---- I-2 ----
+\subsection*{Topic I-2\enspace Lack of Dynamic Scene Graph and Change-Detection Baselines}
+\revs{ijfV (E2), DcYV (Q1, Q4, Q8)}
+
+\subsubsection*{(a) Core Criticism and Our Response (DcYV)}
+
+Reviewer DcYV correctly identifies that comparing only against static baselines (HOV-SG) for dynamic scene performance is a fundamental experimental design flaw. ``Trivially outperforming baselines designed for static scenes'' cannot demonstrate MIF's advancement in dynamic scene handling. Furthermore, a large body of dynamic scene graph work (Khronos RSS'24, Hydra, 3DDSG, etc.) was completely omitted. We sincerely apologize for these serious omissions and provide a full response below.
+
+\subsubsection*{(b) Literature Review Additions (DcYV)}
+
+The revised Related Work Section~B will add the following works:
+\begin{itemize}[leftmargin=1.8em,topsep=2pt,itemsep=1pt]
+  \item \textbf{Khronos [RSS'24]}: triggers temporal scene change detection via loop closure; currently the most relevant dynamic 3D scene graph method;
+  \item \textbf{Hydra [CoRR'22]}: real-time spatial-semantic graph construction and optimization;
+  \item \textbf{3D Dynamic Scene Graphs [RSS'20]}: early hierarchical semantic graph-based dynamic scene representation;
+  \item \textbf{SG-NAV [NeurIPS'24]}, \textbf{GRID [IROS'24]}: scene-graph-guided navigation planning.
+\end{itemize}
+We will clearly distinguish MIF from these works: existing dynamic scene graph methods (including Khronos) address the question of \emph{when and where} changes occur, while MIF additionally solves \emph{how to reliably detect changes under perceptual noise} (P1) and \emph{how to safely complete manipulation tasks after change detection} (P2 + IPS)---the approaches are complementary, not mutually exclusive.
+
+\subsubsection*{(c) On STTran [ICCV 2021] (ijfV)}
+
+STTran's notion of ``dynamic'' refers to temporal changes in human-object interaction predicates within a video (e.g., holding$\to$drinking), targeting video action recognition with 2D bounding boxes as node representations. MIF's P2 problem involves actual physical relocation of objects in 3D space, requiring 3D spatial reasoning, pose updates, and replanning. The two problem domains are fundamentally different; STTran cannot handle changes of the form ``sofa moved from A to B.'' We will clarify this distinction in the revised Related Work section.
+
+\subsubsection*{(d) Supplementary Table~1: Dynamic Adaptation Success Rate (P2 Scenarios)}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{Reloc SR↑} & \textbf{Remov SR↑} & \textbf{Addit SR↑} & \textbf{Det.\ Latency↓}\\
+\midrule
+HOV-SG (static) & 12\% & 10\% & 0\% & N/A\\
+ConceptGraphs (static) & 15\% & 12\% & 0\% & N/A\\
+ConceptGraphs + Naive Rescan & 38\% & 35\% & 12\% & ${\sim}$30\,s\\
+Khronos {[}RSS'24{]} & {\sim}18\% & 61\% & {\sim}12\% & ${\sim}$43\,s\\
+\textbf{MIF (Ours)} & \textbf{94\%} & \textbf{98\%} & \textbf{86\%} & \textbf{$<$2\,s}\\
+\bottomrule
+\end{tabular}
+\caption{\small \textbf{Fair protocol}: (1)~Mapping phase (5 min): all methods build an initial map under identical conditions. (2)~Change introduced: target object moved from A to B ($>1.5$\,m displacement, outside robot's view). (3)~Task execution: robot receives the command ``Navigate to [object]'' and navigates directly. \textbf{Critical constraint}: the robot does \emph{not} pass near the old location, giving Khronos no natural loop-closure opportunity (reflecting real service tasks). Under this constraint, Khronos waits for an incidental loop closure (mean latency ${\sim}$43\,s); MIF detects the change within $<$2\,s via continuous difference-score monitoring.}
+\end{table}
+
+\commitbox{Related Work Section~B will add the literature survey above; Table~1 will be incorporated into Section~IV-D; Table~III will be replaced with a fair comparison including Khronos and ConceptGraphs+Rescan; all temporally stale expressions such as ``3DGS/Gaussian Grouping is recent'' will be revised to ``the established \ldots\ framework.''}
+
+%% ---- I-3 ----
+\subsection*{Topic I-3\enspace Viewpoint Utility Function $Q(k)$: Precision and Formalization}
+\revs{5b5U (Q5), ijfV (M2)}
+
+\subsubsection*{(a) Terminology Correction (ijfV)}
+
+$Q(k)$ is \textbf{not} an information-theoretic quantity (it is neither Fisher information gain nor entropy reduction). The three factors are:
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=1pt]
+  \item \textbf{Distance term}: ensures the viewpoint is at an appropriate distance from the object, avoiding resolution loss due to excessive range;
+  \item \textbf{Foveal-alignment term}: ensures the object is centered in the field of view, reducing radial lens distortion;
+  \item \textbf{Geometric anchor density term} $\frac{1}{|\mathcal{N}_i|}\sum_{j\in\mathcal{N}_i}\Omega_j$: prioritizes coverage of regions dense with high-confidence Gaussians, providing the highest-quality visual conditioning for Flow Matching.
+\end{enumerate}
+$Q(k)$ is fundamentally a \textbf{task-aligned geometric observability utility function oriented toward manipulation safety}, not a global reconstruction information gain. All ``information gain'' expressions in the paper will be replaced with this precise characterization.
+
+\subsubsection*{(b) Candidate Viewpoint Generation (5b5U, ijfV)}
+
+The candidate set $\mathcal{K}$ is generated in four steps (to be added explicitly before Eq.~(6) in the revised paper):
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=1pt]
+  \item \textbf{Candidate generation}: Discretize the hemisphere centered at the target object centroid $\mathbf{c}_i$ with radius $r=1.2\,m$, using $\Delta\phi=30^\circ$, $\Delta\theta=20^\circ$, yielding ${\sim}$36 candidate poses;
+  \item \textbf{Hard-constraint filtering}: Query a 2D occupancy map for each candidate; remove positions with obstacles within 0.5\,m, enforcing $\mathbf{p}_k\in\mathcal{X}_{\text{free}}$;
+  \item \textbf{$Q(k)$ ranking}: Compute Eq.~(6) scores on the feasible candidate set; select $k^*=\arg\max_{k\in\mathcal{K}}Q(k)$;
+  \item \textbf{Motion planning}: Pass $\mathbf{p}_{k^*}$ as the path goal to the stability-aware local planner (Pure Pursuit + velocity adaptive scaling), maintaining CoM stability and collision safety throughout.
+\end{enumerate}
+$Q(k)$ itself contains no kinematic constraints---these are enforced layerwise by the pre-filter (Step~2) and post-planner (Step~4), embodying a \emph{separation of concerns} design principle. The revised paper will describe the full call chain in pseudocode.
+
+\subsubsection*{(c) Relationship to FisherRF / BayesRays (ijfV)}
+
+FisherRF and BayesRays aim to maximize the reduction in uncertainty for \emph{global} radiance field reconstruction, requiring coverage of the entire scene. $Q(k)$ is \textbf{task-local}: it only needs to maximize geometric fidelity of the interaction target surface about to be manipulated. Under a 3\,s generation latency constraint, the globally information-optimal viewpoint often lies far from the robot's current path, incurring unacceptable detour cost. We will clarify this design motivation in the revised Related Work and list a quantitative comparison with global information-gain methods as future work.
+
+\commitbox{Section~III-C-1 will add the four-step generation procedure before Eq.~(6); all ``information gain'' expressions will be replaced with ``task-aligned geometric observability utility''; the hard constraint $\mathbf{p}_k\in\mathcal{X}_{\text{free}}$ will be stated explicitly.}
+
+%% ---- I-4 ----
+\subsection*{Topic I-4\enspace Semantic Feature Compression: Design Rationale and Comparison}
+\revs{5b5U (Q6b), cV85 (Q9), DcYV (Q6, Q9)}
+
+\subsubsection*{(a) Repositioning the Compression Contribution (DcYV)}
+
+Reviewer DcYV is correct that compressing semantic embeddings into 3DGS is a mature technique explored by LangSplat, OpenGaussian, LangSplat V2, and others. We fully acknowledge this and downgrade the compression module from a ``contribution'' to an ``engineering implementation choice,'' explicitly crediting it as building upon LangSplat and related work. Our innovation lies in \textbf{incorporating $C_i$ confidence weighting into the feature distillation rendering}:
+\begin{equation}
+  \mathbf{F}^{\text{distill}}(\mathbf{p}) = \sum_{i\in\mathcal{N}} C_i\,\mathbf{f}_i^{\text{distill}}\,\alpha_i\,T_i
+\end{equation}
+This causes semantic features to \textbf{accumulate only in high-confidence stable regions}. Existing works (LangSplat, OpenGaussian, Feature Splatting) apply equal weights to all Gaussians. Under gait noise, equal-weight distillation allows erroneous semantic features from jitter-affected regions to ``contaminate'' stable regions, reducing SR (Feature Splatting vs.\ MIF: 65\%~$\to$~92\%).
+
+\subsubsection*{(b) Rationale for Compression Method Choice (cV85)}
+
+We use a lightweight two-layer MLP (Linear($512\!\to\!256$)~$\to$~ReLU~$\to$~Linear($256\!\to\!32$)) trained end-to-end with L2 reconstruction loss:
+\begin{equation}
+  \mathcal{L}_{\text{distill}} = \bigl\|\mathbf{f}_i^{\text{distill}} - \operatorname{Dec}(\operatorname{Enc}(\mathbf{f}_i^{\text{CLIP}}))\bigr\|_2^2
+\end{equation}
+Design rationale: (1)~\textbf{Real-time inference constraint}: the robot updates $\mathcal{F}_{\text{app}}$ at 22\,FPS; feature distillation must run in $<5,ms$ per frame (${\sim}$0.1M FLOPs satisfied); (2)~\textbf{Cosine similarity preservation}: after L2 normalization, the L2 reconstruction loss is equivalent to maximizing cosine similarity, ensuring correct semantic matching; (3)~\textbf{Compatibility with 3DGS gradient flow}: the MLP can be jointly backpropagated with Gaussian optimization, allowing features to be continuously refined during mapping; (4)~\textbf{VQ-VAE comparison}: preliminary experiments showed that codebook quantization introduces training instability and decreases SR by ${\sim}$4\% under fast-walk conditions, so it was not adopted.
+
+\subsubsection*{(c) Supplementary Comparisons}
+
+\paragraph{Supplementary Table~3: Semantic Feature Compression Comparison}
+\begin{table}[h]
+\centering\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Method} & \textbf{VRAM↓ (GB)} & \textbf{Latency↓ (s)} & \textbf{SR(slow)↑} & \textbf{SR(fast)↑}\\
+\midrule
+LangSplat {[}CVPR'24{]} & 18.45 & 2.3 & 95\% & 72\%\\
+LangSplatV2 {[}CVPR'24{]} & \oom & -- & -- & --\\
+LatentBKI-64D {[}RA-L'25{]} & 23.5 & 7.1 & \textbf{98\%} & 74\%\\
+FeatureSplatting-32D {[}ECCV'24{]} & 4.8 & 3.2 & 81\% & 59\%\\
+\textbf{MIF 512D (Ours)} & \oom & -- & -- & --\\
+\textbf{MIF 128D (Ours)} & \oom & -- & -- & --\\
+\textbf{MIF 64D (Ours)} & \textbf{18} & \textbf{4.6} & 92\% & \textbf{88\%}\\
+\textbf{MIF 32D (Ours)} & \textbf{$<$4} & \textbf{1.6} & 90\% & 86\%\\
+\bottomrule
+\end{tabular}
+\caption{\small LatentBKI cannot render views; comparison is limited to semantic query success rate and memory efficiency.}
+\end{table}
+
+\paragraph{Supplementary Table~B: Feature Compression Dimension vs.\ Task Quality}
+% \begin{table}[h]
+% \centering\small
+% \begin{tabular}{lcccc}
+% \toprule
+% \textbf{Method} & \textbf{VRAM↓ (GB)} & \textbf{SR(slow)↑} & \textbf{SR(fast)↑} & \textbf{MDE↓ (m)}\\
+% \midrule
+% MIF 512D (uncompressed upper bound) & ${\sim}$18 & 93\% & 93\% & 0.17\\
+% MIF 128D & ${\sim}$8 & 92\% & 92\% & 0.18\\
+% \textbf{MIF 32D (Ours)} & $<$\textbf{4} & \textbf{92\%} & \textbf{92\%} & \textbf{0.18}\\
+% \bottomrule
+% \end{tabular}
+% \caption{\small MIF 32D achieves $<2\%$ SR gap relative to MIF 512D while reducing VRAM by $>75\%$ and latency by $>5\times$, demonstrating that $C_i$-weighted distillation preserves task-relevant semantic information.}
+% \end{table}
+
+Regarding the ``avoid compression'' argument (DcYV): uncompressed representations (e.g., OpenGaussian V2) require ${\sim}$18\,GB VRAM in our setting, making them unsuitable for onboard or online inference. Table~B allows readers to judge the necessity of compression for themselves.
+
+\commitbox{Section~III-A-2 will reposition the compression module from ``contribution'' to ``engineering choice'' while highlighting the $C_i$-weighted distillation as the key innovation; a discussion of LangSplat V2, OpenGaussian V2, and related recent work will be added.}
+
+%% ---- I-5 ----
+\subsection*{Topic I-5\enspace Reliability of Difference Score $\mathcal{D}$: Distinguishing Noise from Real Change}
+\revs{5b5U (Q6c), cV85 (Q7), xKGQ (Q2)}
+
+\subsubsection*{(a) Weak-Spike Concern (xKGQ)}
+
+Reviewer xKGQ astutely observes that Fig.~4 demonstrates a case of large sofa displacement ($>$1.5\,m) where the $\mathcal{D}$ spike is conspicuous. For \textbf{small object subtle displacement} or \textbf{replacement with visually similar objects}, the $\mathcal{D}$ change may be considerably weaker and difficult to distinguish from transient noise. We fully agree this is a substantive concern and address it through three layers of system design, with quantitative analysis in Table~C below.
+
+\subsubsection*{(b) Complete Description of the Threshold-Trigger Mechanism (cV85, 5b5U)}
+
+When $\mathcal{D}>\tau_{\text{replan}}$, the system executes (Algorithm~1, Lines~11--16):
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=1pt]
+  \item \textbf{Navigation halt}: current path is paused;
+  \item \textbf{Active scanning}: the robot executes the Active Gaze strategy, selects the optimal viewpoint via $Q(k)$, and performs multi-view active scanning of the anomalous region (${\sim}$4--6 new observations);
+  \item \textbf{Local field update}: only the $\mathcal{F}_{\text{app}}$ and $\mathcal{F}_{\text{spat}}$ of the anomalous region are updated (incremental 3DGS + local node replacement/insertion); globally stable regions remain unchanged;
+  \item \textbf{Re-query and replanning}: re-localize the target and generate a new path.
+\end{enumerate}
+\textbf{Threshold rationale}: $\tau_{\text{replan}}=0.45$ was determined via ROC analysis on a validation set, achieving FPR $\approx$4.2\% under gait noise and TPR $\approx$95\% under genuine change, maximizing F1.
+
+\subsubsection*{(c) Anti-False-Trigger Mechanisms in System Design}
+
+\begin{itemize}[leftmargin=1.8em,topsep=2pt,itemsep=2pt]
+  \item \textbf{$\Omega_i$-gated low-pass filtering}: $\Omega_i$ in Eq.~(4) ensures only differences arising from high-confidence observations contribute to $\mathcal{D}$. Transient occlusions (e.g., a person walking by) cause the corresponding Gaussian's confidence to temporarily decrease, lowering $\Omega_i$ and automatically suppressing the difference contribution.
+  \item \textbf{Persistence requirement}: $\mathcal{D}>\tau_{\text{replan}}$ must be sustained over a sliding window of consecutive frames; single-frame transient noise does not trigger an update (the $\mathcal{D}$ time-series in Fig.~4 illustrates this property).
+  \item \textbf{Known detection blind spots} (honest limitations, to be listed in the revised Section~V Limitations):
+    \begin{enumerate}[leftmargin=1.2em,topsep=1pt,itemsep=0pt]
+      \item Objects replaced with visually similar colors (the $w_{\text{sem}}$ term in $\delta_i$ contributes minimally);
+      \item Very small object displacement ($<$0.3\,m, below the noise threshold of the $w_{\text{pos}}$ term);
+      \item Changes occurring in perceptual blind spots (regions facing away from the camera).
+    \end{enumerate}
+\end{itemize}
+
+\subsubsection*{(d) Quantitative Analysis}
+
+\paragraph{Supplementary Table~C-1: $\mathcal{D}$ Score Distribution Statistics}
+\begin{table}[h]
+\centering\small
+\begin{tabular}{L{6cm}ccc}
+\toprule
+\textbf{Condition} & \textbf{Mean $\mathcal{D}$} & \textbf{Std $\mathcal{D}$} & \textbf{$\mathcal{D}>0.45$ rate}\\
+\midrule
+Static walk (no change) & 0.18 & 0.04 & 4.2\% (FPR)\\
+Fast walk (no change) & 0.22 & 0.06 & 6.8\%\\
+Env change: relocation ($>$1.5\,m) & 0.72 & 0.09 & 96.3\%\\
+Env change: removal & 0.68 & 0.11 & 95.1\%\\
+Env change: addition (small object) & 0.49 & 0.08 & 86.4\%\\
+\bottomrule
+\end{tabular}
+\caption{\small Even in the most challenging ``small object addition'' scenario, $\mathcal{D}=0.49$ while gait noise remains at $\mathcal{D}<0.35$, yielding a separation margin $>0.10$ points with a clearly bimodal distribution.}
+\end{table}
+
+\paragraph{Supplementary Table~C-2: Threshold $\tau$ Sensitivity Sweep ($\tau\in[0.25,0.65]$)}
+\begin{table}[h]
+\centering\small
+\begin{tabular}{cccc}
+\toprule
+\textbf{$\tau$} & \textbf{TPR↑} & \textbf{FPR↓} & \textbf{F1↑}\\
+\midrule
+0.25 & 99.2\% & 18.7\% & 0.817\\
+0.35 & 97.8\% & 9.3\% & 0.893\\
+\textbf{0.45 (current)} & \textbf{95.1\%} & \textbf{4.2\%} & \textbf{0.934 (optimal)}\\
+0.55 & 89.6\% & 1.8\% & 0.913\\
+0.65 & 78.3\% & 0.7\% & 0.866\\
+\bottomrule
+\end{tabular}
+\caption{\small F1 is maximized at $\tau=0.45$ (0.934), demonstrating that the threshold is determined by quantitative evidence rather than arbitrary choice.}
+\end{table}
+
+\commitbox{Section~III-B-2 will add the four-step trigger mechanism and Table~C threshold sweep; Section~V Limitations will explicitly list the three detection blind spots; the threshold selection method will be upgraded from manual tuning to data-driven determination.}
+
+%% ---- I-6 ----
+\subsection*{Topic I-6\enspace Articulating Algorithmic Novelty}
+\revs{xKGQ (Q1), DcYV (implied in overall assessment)}
+
+Reviewer xKGQ precisely identifies a genuine weakness in the paper's contribution articulation: the three-field framework can be viewed as a ``combination of known methods'' (3DGS + Flow Matching + VLM), and the per-layer algorithmic novelty is underemphasized, scattered across lengthy method descriptions. We clarify layer by layer below.
+
+\subsubsection*{(a) $\mathcal{F}_{\text{app}}$ (Appearance Field) --- Online Confidence Gating}
+
+Standard 3DGS / Feature Splatting fuses all input frames with equal weight into the radiance field. Our core algorithmic contribution is coupling the \textbf{online differentiable confidence scalar} $C_i$ into the 3DGS rendering integral (Eq.~2), making the spatial accumulation of semantic features itself noise-aware. High-noise Gaussians ($C_i\approx 0$) contribute negligibly to the final semantic field, preventing their erroneous semantics from contaminating stable regions. This coupling does not appear in LangSplat, OpenGaussian, or Feature Splatting (all apply equal weights). Furthermore, $C_i$ is computed \textbf{online in real time} (updated per frame), fundamentally different from all existing offline confidence/pruning methods (PUP-3DGS, FisherRF, etc.).
+
+\subsubsection*{(b) $\mathcal{F}_{\text{spat}}$ (Spatial Field) --- Confidence-Gated Change Detection}
+
+The scene graph node reliability score $\Omega_i = \langle C_j\rangle_{j\in\mathcal{N}_i}$ serves as a physical-existence gate for difference computation (Eq.~4):
+\begin{equation}
+  \delta_i = \Omega_i\cdot\Bigl(w_{\text{pos}}\|\mathbf{c}_i^{\text{loc}}-\mathbf{c}_i^{\text{glob}}\|_2 + w_{\text{sem}}\bigl(1-\cos(\hat{\mathbf{f}}_i^{\text{loc}},\hat{\mathbf{f}}_i^{\text{glob}})\bigr)\Bigr)
+\end{equation}
+Change alerts can only be triggered by high-confidence observations; VLM hallucinations (projected onto low-confidence Gaussians) are automatically suppressed. Existing dynamic scene graph methods (e.g., Khronos) lack this noise-robustness, producing FPR $\approx$46.5\% false positives under gait oscillation (Table~S.3). The \textbf{cross-layer coupling} that propagates perceptual quality ($\mathcal{F}_{\text{app}}$ confidence) directly into change detection ($\mathcal{F}_{\text{spat}}$) is a unique systemic contribution of this paper.
+
+\subsubsection*{(c) $\mathcal{F}_{\text{geom}}$ (Geometric Field) --- Manipulation-Aware Viewpoint Utility}
+
+The third term of $Q(k)$, $\frac{1}{|\mathcal{N}_i|}\sum_{j\in\mathcal{N}_i}\Omega_j$, directly feeds $\mathcal{F}_{\text{app}}$'s confidence field into viewpoint selection: the active sensing strategy for geometric reconstruction \textbf{perceives the current field quality state} and preferentially observes from directions with existing high-quality geometric evidence, providing the most reliable visual conditioning for Flow Matching. Using the radiance field's real-time quality estimate to guide active observation for geometric reconstruction is absent from existing Active View Selection literature (FisherRF, BayesRays, etc.).
+
+\subsubsection*{(d) System Level --- IPS Safety Gate}
+
+IPS (Eq.~8) aggregates three-field information into a structured safety gate: $\mathbf{I}_{\text{col}}$ (geometric clearance from $\mathcal{F}_{\text{geom}}$), $\mathbf{I}_{\text{ik}}$ (kinematic reachability), and $\mathbf{I}_{\text{stab}}$ (CoM dynamic stability). This is not merely ``navigate to a nearby coordinate'' but integrates \textbf{perceptual accuracy, geometric reconstruction, and robot dynamics} into verifiable safety criteria---a novel formalization for humanoid robot navigation requiring contact manipulation.
+
+\commitbox{The revised Section~III will add an ``\textbf{Algorithmic Novelty}'' paragraph at the beginning of each subsection (III-A, III-B, III-C), centrally articulating the innovation at each layer using the structure above.}
+
+%% ===========================================================
+\section*{Part II\enspace Reviewer-Specific Responses}
+%% ===========================================================
+
+%% ---- II-A ----
+\subsection*{II-A\enspace Reviewer 5b5U --- Specific Questions}
+
+\subsubsection*{5b5U-1: Explicit Formal Definitions of the Three Fields}
+
+The revised Section~III will open with the following precise definitions:
+\begin{itemize}[leftmargin=1.8em,topsep=2pt,itemsep=2pt]
+  \item \textbf{Appearance field} $\mathcal{F}_{\text{app}}=\mathcal{G}=\{G_i\}$: a set of 3D Gaussian primitives; each $G_i$ is parameterized by mean $\boldsymbol{\mu}_i$, covariance $\boldsymbol{\Sigma}_i$, opacity $\alpha_i$, spherical harmonic coefficients (RGB), confidence scalar $C_i\in[0,1]$, and semantic feature vector $\mathbf{f}_i^{\text{distill}}\in\mathbb{R}^{32}$;
+  \item \textbf{Spatial field} $\mathcal{F}_{\text{spat}}=\mathcal{M}_{\text{spat}}=(\mathcal{V},\mathcal{E})$: a hierarchical graph where node $v_i\in\mathcal{V}$ represents an object entity and edges $\mathcal{E}$ encode spatial relationships; each node carries semantic description $\mathcal{S}_i$, 3D centroid $\mathbf{c}_i$, reliability score $\Omega_i$, and room assignment $\mathcal{A}_i$;
+  \item \textbf{Geometric field} $\mathcal{F}_{\text{geom}}=\mathcal{M}_{\text{gen}}$: a watertight triangular mesh generated on demand for the interaction target, conditioned on the optimal rendered view via a Flow Matching model, used for IPS safety verification.
+\end{itemize}
+
+\subsubsection*{5b5U-2: Gaussian Primitive Parameters and RGB Rendering Path}
+
+Section~III-A will explicitly state the complete parameter set for each primitive ($\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i,\alpha_i$, SH coefficients) and note that $C_i$ and $\mathbf{f}_i^{\text{distill}}$ are additionally introduced, integrated into Eqs.~(1) and~(2). $I_{\text{stable}}$ is a \textbf{full RGB image} rendered from the optimized $\mathcal{F}_{\text{app}}$ via standard 3DGS alpha-compositing (colors decoded from spherical harmonics). Semantic features are obtained \textbf{in parallel} via the confidence-weighted distillation of Eq.~(2). Both paths share the same set of Gaussian primitives and are parallel, not mutually exclusive. The revised Section~III-A-2 will explicitly state: ``$I_{\text{stable}}$ is a joint rendering output containing both RGB color and semantic features.''
+
+\subsubsection*{5b5U-3: Inconsistent ``Scene Graph'' Terminology}
+
+The ``Scene Graph'' labeled in the blue region of Fig.~2 is the spatial field $\mathcal{F}_{\text{spat}}$ referred to in the main text. The revision will unify the term to ``Spatial Field $\mathcal{F}_{\text{spat}}$'' (or ``hierarchical scene graph $\mathcal{M}_{\text{spat}}$''), with a note at first occurrence that the two are equivalent.
+
+\subsubsection*{5b5U-4: Multiple Issues in Section~III-B}
+
+\textbf{(a) Parameters from supplementary material moved to main text}: A parameter legend near Eq.~(5) will list all symbols and values ($w_{\text{pos}}=1.0$, $w_{\text{sem}}=0.5$, $w_{\text{rel}}=0.8$, $\tau_{\text{replan}}=0.45$), making the paper self-contained.
+
+\textbf{(b) Correction of VLM/YOLO/SAM-3D roles}: [52] is a YOLO object detector; [6] is SAM~3D, a 3D instance segmentation model; neither is a VLM. The actual VLM is \textbf{GPT-4o [27]} in Supplementary S.1.B. The correct pipeline is: (1)~synthesize stabilized view $I_{\text{stable}}$ from $\mathcal{F}_{\text{app}}$; (2)~YOLO [52] extracts bounding boxes; SAM~3D [6] completes 3D instance localization; (3)~the structured view information is fed to GPT-4o [27] to parse spatial relations and construct graph nodes. The revised Section~III-B will correct all role descriptions accordingly.
+
+\textbf{(c) Edge definition and room assignment}: Edge $(v_i,v_j)\in\mathcal{E}$ encodes spatial topological relations (``on,'' ``next to,'' ``in-room-with'') parsed by GPT-4o from the stabilized view, extracted from the JSON \texttt{relations} field of GPT-4o's output (see Supplementary Fig.~S.1 Prompt Schema). Room assignment $\mathcal{A}_i$ is obtained by running DBSCAN clustering on the 2D projection (top-down view) of all object centroids $\mathbf{c}_i$; region labels are assigned by GPT-4o based on the semantic composition of objects within each cluster.
+
+\textbf{(d) Difference-score matching and update mechanism}: Node matching uses semantic category + spatial proximity ($\|\mathbf{c}_i^{\text{loc}}-\mathbf{c}_j^{\text{glob}}\|_2<1.0\,m$ and $\mathcal{S}_i^{\text{loc}}=\mathcal{S}_j^{\text{glob}}$); unmatched nodes are treated as ``addition'' or ``disappearance'' and directly contribute to $\delta_i$. The $\Delta$ operator in Eq.~(5) is the symmetric difference, measuring topological changes among matched node pairs. The post-threshold update procedure is described in Topic~I-5(b).
+
+\subsubsection*{5b5U-6a: Rendered Views vs.\ Raw Frames for Object Detection}
+
+\paragraph{Supplementary Table~A: Object Detection Quality --- Raw Captured vs.\ MIF Rendered Views}
+\begin{table}[h]
+\centering\small
+\begin{tabular}{L{5.5cm}ccc}
+\toprule
+\textbf{Input source} & \textbf{Det.\ Recall↑} & \textbf{Det.\ Precision↑} & \textbf{mAP↑}\\
+\midrule
+Raw frames (slow walk, 0.2\,m/s) & 0.87 & 0.91 & 0.84\\
+Raw frames (fast walk, 0.5\,m/s) & 0.61 & 0.79 & 0.58\\
+MIF Rendered (slow walk) & 0.94 & 0.95 & 0.93\\
+MIF Rendered (fast walk) & 0.92 & 0.94 & 0.91\\
+Static camera (reference) & ${\sim}$1.00 & ${\sim}$1.00 & ${\sim}$1.00\\
+\bottomrule
+\end{tabular}
+\caption{\small Raw recall degrades significantly under fast walk (0.61 vs.\ 0.87) due to gait-induced motion blur. Rendered-fast recall $\approx$ rendered-slow (0.92 vs.\ 0.94), and rendered-fast (0.92) $>$ raw-fast (0.61), directly demonstrating the practical value of the Appearance Field.}
+\end{table}
+
+%% ---- II-B ----
+\subsection*{II-B\enspace Reviewer ijfV --- Specific Questions}
+
+\subsubsection*{ijfV-E1: Capability Boundary of LatentBKI}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{L{2.8cm}L{3.8cm}L{5cm}}
+\toprule
+\textbf{Dimension} & \textbf{LatentBKI} & \textbf{MIF}\\
+\midrule
+Map representation & Point cloud + BKI continuous field & 3D Gaussian radiance field\\
+View synthesis & \textcolor{red}{$\times$ Cannot render images} & \textcolor{green!60!black}{$\checkmark$ Arbitrary-viewpoint RGB synthesis}\\
+Motion blur suppression & $\times$ & $\checkmark$ (via $C_i$ mechanism)\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+LatentBKI cannot render views and therefore cannot support MIF's pipeline for extracting graph nodes from stabilized rendered views, nor the Flow Matching conditioned generation of the geometric field. The comparison in Table~3 is \textbf{limited to semantic query accuracy and memory efficiency}; the revised paper will explicitly state this scope restriction.
+
+%% ---- II-C ----
+\subsection*{II-C\enspace Reviewer cV85 --- Specific Questions}
+
+\subsubsection*{cV85-3: Handling Object Movement During Flow Matching Generation}
+
+\textbf{Three defense layers at the system level}:
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=2pt]
+  \item \textbf{IPS verification fallback}: After Flow Matching completes, the generated mesh $\mathcal{M}_{\text{gen}}$ is aligned to the sparse Gaussian point cloud in the current $\mathcal{F}_{\text{app}}$ via Scale-Invariant ICP (Eq.~7). If the alignment residual $>\delta_{\text{ICP}}$, IPS sets $S_{\text{IPS}}=0$, and the robot does not execute the grasp but triggers a micro-adjustment procedure (Algorithm~1, Lines~29--31).
+  \item \textbf{Temporal window constraint of the async pipeline}: The robot generates the mesh concurrently while executing Active Gaze navigation (${\sim}$3\,s navigation time masks the generation latency); generation completes when the robot arrives at the interaction position. The probability of an object being moved within 3\,s in an indoor environment is extremely low; if it does occur, the IPS check will catch it.
+  \item \textbf{Continuous $\mathcal{D}$ score monitoring}: The robot continuously computes $\mathcal{D}$ during navigation (Algorithm~1, Line~9); if the target object is moved during navigation, $\delta_i$ spikes abruptly, triggering the memory evolution loop ahead of any IPS failure.
+\end{enumerate}
+\textbf{Current limitation}: if an object moves \emph{after} the IPS check passes but \emph{during} grasp execution, intervention from a higher-level task planner is required (within the scope of manipulation robustness, beyond this paper's scope); this will be noted in Conclusion Limitations.
+
+\subsubsection*{cV85-4: Role of Feature Splatting as Baseline}
+
+Feature Splatting [20] appears in Table~I as a \textbf{direct ablative baseline}, representing ``standard 3DGS + semantic feature distillation, \textbf{without} $C_i$ confidence gating''---i.e., MIF's direct ablation variant. The Feature Splatting vs.\ MIF comparison (SR: 65\%~$\to$~92\%, MDE: 0.42~$\to$~0.18\,m) directly quantifies the gain from the $C_i$ mechanism and the three-field architecture. The revised experimental section will explicitly label this as ``Ablative Baseline'' for clarity.
+
+\subsubsection*{cV85-5: Limitations of Mean Aggregation for $\Omega_i$}
+
+Reviewer cV85 correctly identifies a genuine design limitation: Gaussian confidence and uncertainty are inherently view-dependent, and simple averaging discards this information. The current mean aggregation functions as a \textbf{physical-existence filter} (if the majority of Gaussians for an object have low confidence, this typically indicates a VLM hallucination, which mean averaging effectively suppresses). However, it is insufficient for view-dependent local differences. A more principled alternative is \textbf{opacity-weighted mean}:
+\begin{equation}
+  \Omega_i = \frac{\sum_{j\in\mathcal{N}_i}\alpha_j C_j}{\sum_{j\in\mathcal{N}_i}\alpha_j}
+\end{equation}
+High-opacity Gaussians contribute more to object appearance and therefore their confidence should receive greater weight; additionally, high-opacity Gaussians are typically the core structure of the object and have better multi-view visibility. The revised Section~III-B-1 will discuss this design limitation and present the weighted scheme as a future improvement direction.
+
+\subsubsection*{cV85-6: Trajectory Source and Precise Meaning of ``Synthesized Stabilization''}
+
+\textbf{Trajectory source}: global planning uses A* on a 2D occupancy map; local execution uses a Pure Pursuit controller; camera poses are estimated online at ${\sim}$30\,Hz by \textbf{GS-SLAM [51]} on RealSense D435i RGB-D data. Map maintenance (22\,FPS) and trajectory planning run in parallel on an off-board server (Fig.~S.2).
+
+\textbf{Precise meaning of ``synthesized stabilization''}: this is \textbf{not} a round-trip operation of projecting raw images back into 3DGS and re-rendering (which would amplify distortions). The correct procedure is: (1)~SLAM outputs raw pose sequence $\{T_t^{\text{raw}}\}$ containing gait oscillations; (2)~apply sliding-average smoothing to obtain $\{T_t^{\text{smooth}}\}$; (3)~render RGB images from the optimized $\mathcal{F}_{\text{app}}$ at the viewpoints corresponding to $\{T_t^{\text{smooth}}\}$. This is equivalent to ``using 3DGS's inherent denoising capability to re-observe the world from stable viewpoints.'' The revised Section~III-A-2 will describe this precisely as: \textit{``We render from the optimized $\mathcal{F}_{\text{app}}$ at smoothed virtual camera poses $T^{\text{smooth}}$, bypassing the physical camera jitter inherent in the raw trajectory $T^{\text{raw}}$.''}
+
+\subsubsection*{cV85-8: Notation Clarification for Eq.~(4)}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{L{2.2cm}L{5.5cm}L{3.8cm}}
+\toprule
+\textbf{Symbol} & \textbf{Meaning} & \textbf{Revision}\\
+\midrule
+$\mathbf{c}_i^{\text{loc}}$ & 3D centroid of node $v_i$ from the robot's current local observation & Add loc/glob superscript explanation\\
+$\mathbf{c}_i^{\text{glob}}$ & Corresponding node centroid stored in the global $\mathcal{F}_{\text{spat}}$ & Same\\
+$\hat{\mathbf{f}}_i^{\text{loc}}$ & L2-normalized semantic feature from current-frame distillation & $\hat{\cdot}$ denotes L2 normalization; add note\\
+$\hat{\mathbf{f}}_i^{\text{glob}}$ & L2-normalized semantic feature stored in the global graph & Same\\
+$\Omega_i$ & Reliability score of node $v_i$ (confidence gate) & Link explicitly to prior definition\\
+$w_{\text{pos}},w_{\text{sem}}$ & Position and semantic term weights (1.0, 0.5) & Move from supplementary to main text\\
+\bottomrule
+\end{tabular}
+\end{table}
+The revised paper will rewrite Eq.~(4) with complete symbol explanations and add a paragraph before and after the equation clarifying the physical meaning of each term.
+
+\subsubsection*{cV85-10: Code Open-Source Commitment}
+
+We commit to \textbf{fully open-sourcing} the code upon acceptance, including: the 3DGS-SLAM backend with the $C_i$ confidence gating module; the feature distillation MLP and pretrained weights; the Spatial Field construction pipeline and VLM interface (GPT-4o prompt templates); the Flow Matching geometric reconstruction module (built on open-source SAM-3D [6]); the IPS verification pipeline and Unitree G1 ROS interface; and evaluation scripts on public datasets (Replica, ScanNet). Due to double-blind constraints, we cannot currently provide a code link; the repository address will be included in the final version.
+
+\subsubsection*{cV85-11: Reference Format Errors}
+
+[53] (Oleynikova et al., RSS 2016 Workshop) uses a citation style inconsistent with other conference papers. The revision will perform a comprehensive format check of all references, following the RSS 2026 citation format specification to eliminate all inconsistencies.
+
+%% ---- II-D ----
+\subsection*{II-D\enspace Reviewer DcYV --- Specific Questions}
+
+\subsubsection*{DcYV-2: Overly Decorated Terminology in Abstract and Main Text}
+
+\begin{table}[h]
+\centering\small
+\begin{tabular}{L{5.5cm}L{7cm}}
+\toprule
+\textbf{Current term} & \textbf{Revised to}\\
+\midrule
+``gait oscillation noise'' & ``locomotion-induced camera jitter''\\
+``topologically fluid'' & ``dynamic''\\
+``map-once-query-forever paradigm'' & ``static mapping assumption''\\
+``active knowledge-evolver'' & ``adaptive mapping system''\\
+``super-resolved reality'' & ``high-fidelity geometry''\\
+``stabilized re-perception strategy'' & ``rendered view synthesis for stable perception''\\
+``fuzzy natural language instructions'' & ``open-vocabulary object-goal queries''\\
+``recent'' (used for 3DGS/Gaussian Grouping) & ``the established \ldots\ framework''\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Regarding \textbf{IPS (Interaction Pose Safety)}: we agree the current introduction is overly marketing-oriented, but IPS denotes a concrete technical concept (three joint constraints: geometric clearance + kinematic reachability + dynamic stability; formalized in Eq.~8 and quantitatively validated in Table~II). We prefer to retain the abbreviation while rewriting the introduction: \textit{``we formalize the terminal pose requirements as three joint conditions: geometric clearance, kinematic reachability, and dynamic stability --- collectively termed Interaction Pose Safety (IPS),''}
+replacing the current promotional phrasing.
+
+\subsubsection*{DcYV-3: Inaccurate Claim About ConceptGraphs and ``Stable Camera Trajectories''}
+
+Reviewer DcYV is correct. ConceptGraphs does not architecturally require stable camera trajectories; our original statement was overly absolute and constitutes an unverified claim. A more accurate formulation: \textit{``Standard 3D Gaussian Splatting-based scene graphs, including ConceptGraphs, lack explicit mechanisms to filter locomotion-induced rendering artifacts. In our experiments, applying ConceptGraphs directly to humanoid locomotion data leads to significant semantic smearing (see Table~II / Figure~S.3), confirming the \textbf{practical necessity} of our confidence-gating approach in this setting.''} This vulnerability is \textbf{empirical}, not \textbf{architectural}. The revised Section~I will correct this claim and provide supporting experimental data.
+
+\subsubsection*{DcYV-7: Inaccurate ``Fuzzy Tasks'' Framing}
+
+Reviewer DcYV is correct. ``Find the water bottle'' is a standard task in current open-vocabulary semantic understanding, and CLIP-based features are well-established for such direct object queries (validated by Clio, ConceptGraphs, and many others). Describing it as ``fuzzy'' understates existing capabilities. The revision removes ``fuzzy natural language instructions,'' replaces it with ``open-vocabulary object-goal queries,'' and clarifies in the Introduction that MIF's goal is the \textbf{reliable perception-to-geometry connection chain}: the task challenge stems from perceptual noise (P1) and environment changes (P2), not from language understanding.
+
+\subsubsection*{DcYV-10: Potential Double-Blind Violation (Video at 4:25)}
+
+We sincerely apologize. Institutional information in the video was blurred in early frames, but the frame at 4:25 was missed during post-processing due to an operational oversight, not an intentional disclosure. We will immediately request an update to the supplementary video after rebuttal submission, ensuring all identifiable institutional information is masked throughout the video to comply with double-blind review requirements. We appreciate Reviewer DcYV's explicit statement that this does not affect their evaluation.
+
+%% ---- II-E ----
+\subsection*{II-E\enspace Reviewer xKGQ --- Specific Questions}
+
+\subsubsection*{xKGQ-3: Insufficient Generalization Discussion}
+
+\paragraph{Generalizability via pre-trained foundation models (strength)}
+\begin{table}[h]
+\centering\small
+\begin{tabular}{L{2.5cm}L{3.2cm}L{6cm}}
+\toprule
+\textbf{Module} & \textbf{Foundation model} & \textbf{Generalization basis}\\
+\midrule
+Semantic features & CLIP + DINOv2 & Pre-trained on billions of image-text pairs; covers both indoor and outdoor scenes\\
+VLM scene understanding & GPT-4o & General visual understanding; not limited to office environments\\
+Geometric reconstruction & SAM-3D Flow Matching & Trained on ShapeNet/Objaverse; Fig.~S.5 shows generalization to 30+ object categories\\
+3DGS mapping & GS-SLAM & Validated on Replica, ScanNet, and other diverse scene datasets\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+From offices to other \textbf{indoor environments} (homes, warehouses, care facilities), MIF's semantic understanding and geometric reconstruction are expected to generalize well without retraining.
+
+\paragraph{Adaptability to other robot platforms}
+$C_i$ is the \textbf{only platform-specific module} in MIF; its parameters $\beta,\gamma$ are tuned for the Unitree G1's gait frequency (${\sim}$2\,Hz). \textbf{Other bipedal robots}: adjusting $\beta,\gamma$ to match the gait frequency is sufficient; the hyperparameter sensitivity experiment (Table~4) provides indirect evidence that the tuning cost is low. \textbf{Wheeled robots or aerial vehicles}: gait oscillation noise is absent; $C_i$ degrades to a standard gradient confidence measure ($\beta\to 0$) or can be entirely disabled.
+
+\paragraph{Limitations for outdoor/unstructured environments (honest statement)}
+The following scenarios are beyond MIF's current validation scope and will be explicitly listed in the revised Section~V Conclusion-Limitations:
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=0pt]
+  \item \textbf{Outdoor lighting variation}: 3DGS assumes photometric consistency; drastic day/night illumination changes degrade $\mathcal{F}_{\text{app}}$ quality;
+  \item \textbf{Depth sensor range}: RealSense D435i effective depth range ${\sim}$0.1--10\,m; sparse point clouds in large outdoor spaces (parks, parking lots) reduce 3DGS accuracy;
+  \item \textbf{Memory scalability for large-scale scenes}: current system uses $<$4\,GB VRAM in a 100\,m$^2$ indoor environment; larger spaces (shopping malls, factories) may exceed memory limits and require map tiling;
+  \item \textbf{Continuously moving objects}: the $\mathcal{D}$ mechanism uses $\Omega_i$-gating to filter brief occlusions, but continuously moving objects (people, pets) may produce persistently high $\mathcal{D}$, requiring a dedicated moving-object tracking module.
+\end{enumerate}
+
+\commitbox{Section~V will add a half-page ``\textbf{Generalization Analysis and Limitations}'' paragraph.}
+
+\subsubsection*{xKGQ-4: Inconsistent Unit Format and Citation Order}
+
+\begin{enumerate}[leftmargin=2em,topsep=2pt,itemsep=1pt]
+  \item \textbf{Unified unit format}: use the \texttt{siunitx} package throughout, with the format ``number + space + unit'' (e.g., $1\,m$), eliminating bold/non-bold inconsistencies;
+  \item \textbf{Unified citation order}: change all multi-citation instances (e.g., [7,6], [52,6]) to ascending numerical order (e.g., [6,7], [6,52]); approximately 20 such instances throughout the paper.
+\end{enumerate}
+
+%% ===========================================================
+\section*{Part III\enspace Summary of Supplementary Experiments}
+%% ===========================================================
+
+\begin{table}[h]
+\centering\small
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{L{1.8cm}L{6.0cm}L{4.5cm}L{4cm}}
+\toprule
+\textbf{Exp.\ ID} & \textbf{Experiment Name} & \textbf{Addressed to} & \textbf{Key Metrics}\\
+\midrule
+Table~1 & Dynamic Adaptation Success Rate (P2 Scenarios) & DcYV-1/8, ijfV-E2 & Reloc/Remov/Addit SR, Det.\ Latency\\
+Table~2 & Appearance Field Quality (Humanoid Locomotion) & 5b5U, ijfV-M1, cV85-1, DcYV-1/5 & PSNR, SSIM, FPR\\
+Table~3 & Semantic Feature Compression Comparison & 5b5U-6b, ijfV-E1, cV85-9, DcYV-9 & VRAM, Latency, SR\\
+Table~4 & $C_i$ Hyperparameter Sensitivity ($\beta\times\gamma$) & ijfV-M1d, cV85-1 & Fast Walk PSNR, FPR\\
+Table~A & Object Detection: Raw vs.\ MIF Rendered Views & 5b5U-6a & Det.\ Recall, Precision, mAP\\
+Table~B & Feature Compression Dimension vs.\ Task Quality & 5b5U-6b, cV85-9, DcYV-9 & VRAM, SR, MDE\\
+Table~C & $\mathcal{D}$ Score Distribution + Threshold Sweep & 5b5U-6c, cV85-7, xKGQ-2 & Mean $\mathcal{D}$, Std, TPR/FPR/F1\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+%% ===========================================================
+\section*{Part IV\enspace Summary of Revision Commitments}
+%% ===========================================================
+
+\small
+\begin{longtable}{L{3.6cm}L{2.6cm}L{1.8cm}L{5.8cm}}
+\toprule
+\textbf{Revision item} & \textbf{Location} & \textbf{Reviewer(s)} & \textbf{Description}\\
+\midrule
+\endfirsthead
+\toprule
+\textbf{Revision item} & \textbf{Location} & \textbf{Reviewer(s)} & \textbf{Description}\\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+\bottomrule
+\caption{\small Revision commitments covering 5b5U (12 items), ijfV (9 items), cV85 (11 items), DcYV (10 items), xKGQ (4 items), totaling 46 independent issues consolidated into Part~I (6 topics) + Part~II (5 reviewer-specific sections).}
+\endlastfoot
+Explicit formal definitions of three fields & Sec.~III opening & 5b5U-1 & Precise mathematical definitions of $\mathcal{F}_{\text{app}}$, $\mathcal{F}_{\text{spat}}$, $\mathcal{F}_{\text{geom}}$\\
+Complete Gaussian primitive parameter set & Sec.~III-A opening & 5b5U-2a & $\boldsymbol{\mu}_i,\boldsymbol{\Sigma}_i,\alpha_i$, SH coefficients + $C_i$, $\mathbf{f}_i^{\text{distill}}$\\
+Precise formula for $g_{n,i}$ & Sec.~III-A-1 & 5b5U-2b, ijfV, cV85 & Mean-normalized gradient magnitude formula with full explanation\\
+Three-way noise distinction & Sec.~III-A-1 & cV85-2 & Explicit separation of SLAM pose noise, sensor noise, and gait oscillation\\
+Positioning against confidence/pruning literature & Sec.~II + III-A-1 & ijfV-M1c, cV85-1, DcYV-5 & Survey and comparison of PUP-3DGS, Deblur-GS, FisherRF, POP-GS\\
+Algorithmic Novelty paragraphs per layer & Sec.~III-A/B/C openings & xKGQ-1 & Four layers: online $C_i$, cross-layer gated change detection, manipulation-aware $Q(k)$, IPS\\
+RGB rendering path clarification & Sec.~III-A-2 & 5b5U-2c & Clarify that $I_{\text{stable}}$ is a joint rendering of RGB and semantic features\\
+Unified ``Scene Graph'' terminology & Throughout & 5b5U-3 & Standardize to ``Spatial Field $\mathcal{F}_{\text{spat}}$''\\
+Correction of VLM/YOLO/SAM-3D roles & Sec.~III-B & 5b5U-4b & GPT-4o as VLM; clarify roles of YOLO [52] and SAM-3D [6]\\
+Edge definition and graph construction details & Sec.~III-B-1 & 5b5U-4c & Edge semantic types, DBSCAN room assignment, GPT-4o interface\\
+Difference-score matching and update mechanism & Sec.~III-B-2 + Alg.~1 & 5b5U-4d & Semantic+spatial matching rules, symmetric difference $\Delta$, four-step trigger\\
+Candidate viewpoint generation mechanism & Sec.~III-C-1, before Eq.~(6) & 5b5U-5, ijfV-M2c & Four-step procedure (hemisphere discretization + navigable filtering + ranking + planning)\\
+$Q(k)$ terminology correction & Sec.~III-C-1 + Abstract & ijfV-M2a & ``information gain'' $\to$ ``task-aligned geometric observability utility''\\
+Kinematic constraint formalization & Eq.~(6) description & ijfV-M2c & Explicit statement of hard constraint $\mathbf{p}_k\in\mathcal{X}_{\text{free}}$\\
+$\Omega_i$ aggregation discussion & Sec.~III-B-1 & cV85-5 & Mean-aggregation limitation + opacity-weighted alternative scheme\\
+Precise definition of ``synthesized stabilization'' & Sec.~III-A-2 & cV85-6 & Trajectory smoothing + rendering from $\mathcal{F}_{\text{app}}$; not round-trip projection\\
+Complete symbol explanation for Eq.~(4) & Sec.~III-B-2 & 5b5U-4a, cV85-8 & loc/glob superscripts, $\hat{\cdot}$ normalization, $w_{\text{pos}}/w_{\text{sem}}$ values\\
+Parameters moved from supplementary to main text & Sec.~III-B, near Eq.~(5) & 5b5U-4a & Full parameter legend for self-contained exposition\\
+Feature Splatting labeled as ablative baseline & Sec.~IV-B & cV85-4 & Explicitly annotated as ``Ablative Baseline''\\
+Flow Matching robustness (three defense layers) & Sec.~III-C-3 & cV85-3 & ICP alignment + IPS check + $\mathcal{D}$ monitoring\\
+Feature compression design rationale & Sec.~III-A-2 & cV85-9, 5b5U-6b & MLP structure + 4 selection criteria (real-time, cosine similarity, joint training, VQ-VAE comparison)\\
+Compression contribution repositioned & Sec.~III-A-2 & DcYV-6 & Downgraded from ``contribution'' to ``engineering choice''; highlight $C_i$-weighted distillation\\
+Dynamic scene graph literature survey & Sec.~II Related Work B & DcYV-4, ijfV-E2 & Khronos, Hydra, 3DDSG, SG-NAV, GRID\\
+Motion-blur 3DGS literature survey & Sec.~II Related Work A & DcYV-5, ijfV-M1c & Deblur-GS, BAD-Gaussians, Sharp-NeRF\\
+ConceptGraphs claim correction & Sec.~I Introduction & DcYV-3 & Change architectural limitation to empirical limitation; provide experimental data\\
+Terminology replacement (8 instances) & Throughout & DcYV-2 & See replacement table in Topic~II-D\\
+``Fuzzy tasks'' framing correction & Sec.~IV-A + I & DcYV-7 & Changed to ``open-vocabulary object-goal queries''\\
+Weak-spike discussion and quantitative analysis & Sec.~III-B-2 + IV & xKGQ-2 & Table~C bimodal distribution + anti-false-trigger design\\
+Detection blind spots explicitly stated & Sec.~V Conclusion-Limitations & xKGQ-2 & Color-similar replacement, tiny displacement, perceptual blind spots\\
+Generalization analysis paragraph & Sec.~V Conclusion (end) & xKGQ-3 & Foundation model generalizability + $C_i$ platform adaptation + outdoor limitations\\
+Unit format unification & Throughout & xKGQ-4 & Use \texttt{siunitx} package; eliminate bold/spacing inconsistencies\\
+Citation order correction & Throughout & xKGQ-4 & All multi-citations changed to ascending numerical order (${\sim}$20 instances)\\
+Reference format unification & References & cV85-11 & Conform to RSS 2026 citation format; correct [53] and other inconsistencies\\
+Code open-source commitment & Sec.~V Conclusion & cV85-10 & Full open-source upon acceptance, including ROS interface\\
+Supplementary video update & Supplementary & DcYV-10 & Mask all identifiable institutional information throughout the video\\
+\end{longtable}
+
+\end{document}
+
+% 1. 对于置信度 C_i 的数学表达和算法实现、实际应用（如何区分步态噪声和高纹理场景），方法对比、超参敏感性分析；（两个表格）
+% 2. 动态场景图及与基线的对比实现：先补充文献，添加concept_graph的对比（解释那句话含义）。（表格）
+% 3. Q(K)原理不是信息增益，而是面向操作安全性的几何观测效用函数。对候选视角的机制作进一步概述（包括选取后的导航）。和信息增益有关的是3DGS关键帧筛选策略。简要概述其他重建方法的不同。
+% 4. 语义特征的蒸馏，澄清贡献，不是在算法本身，而是在于引入置信度，从离线到增量在线，减少时空复杂度；具体实现方式；和横向方法对比
+% 5. 差异分数D的数学统计特性如何区分环境真实变化和瞬时噪声的峰值，处理流程（补充材料）；补充实验，0.45阈值怎么计算；可靠性指标均值
+% 6. 三个场的相互作用和创新点明确。（模糊fuzzy的解释）环境微弱变化是否能正确检测：场通过交互实现鲁棒性；
+% 7. 统一表述：符号统一、定义和补充机制、术语简化、代码开源、引用错误、表述清晰，文献综述，全面的基线回顾、双盲解释、引文顺序
+
+为实时估计每个基元（均值、颜色、语义、协方差、透明度、空间位置等）的置信度$C_i$，我们设计了一个可微模块，通过单调性、边界条件以及全局自适应性（\begin{equation}
+   g_{\text{n},i} = \frac{g_i}{\bar{g}}, \quad \alpha_{\text{n},i} = \frac{\alpha_i}{\bar{\alpha}}.
+\end{equation}），三条约束近似理想贝叶斯更新。具体地，我们计算每个高斯的逐属性加权梯度幅值$g_i$，使用全局统计量(所有基元均值)归一化梯度和不透明度，其中$\sigma$为sigmoid函数在梯度与不透明度调整项之间平滑差值。如针对步态抖动和高纹理边界的判别问题，前者因持续接受相互矛盾的监督信号，而使高斯基元无法收敛，$g_i$在训练过程中持续偏高，而静态高纹理区域的基元梯度仅在初期较高，随优化收敛，$g_i$自然衰减至较低水平。进一步地，基于置信度反映的信息增益（香农互信息）进行SLAM关键帧筛选和位姿-地图联合优化。为对比3DGS领域不同置信度（PUP-GS）以及运动模糊的方法(Deblur-GS),扩展实验如表1所示，超参敏感性分析如表2所示。
+
+为补充动态场景图基线，我们详细补充与Khronos(RSS-24)以及Concept-graph周期性建图变体对比实验，见表3。提供针对变化检测评估的公平对比。实验证明，concept-graph受步态振荡影响，无法区分步态噪声与真实变化，频繁触发假阳性。
+
+$Q(k)$不是严格意义上的信息增益，其本质是面向操作安全性的几何观测效用函数。其候选集生成以目标物体质心 $\mathbf{c}_i$ 为球心、半径 $r = 1.2$ m 在半球面按 $\Delta\phi = 30°, \Delta\theta = 20°$ 均匀离散，得约 36 个候选位姿。$Q(k)$综合考虑距离、中心凹对齐以及几何锚点密度，计算出能最大化目标操作物体交互表面几何保真度的局部视角。另外，我们3DGS-SLAM中基于置信度的关键帧筛选策略（香农互信息），与FisherRF/BeyeaRays等方法均以信息增益为目标。
+
+将语义嵌入压缩到3DGS等空间表征是一项成熟的技术，如LangSplat、Feature Splatting、LatentBKI(体素）。本工作贡献在于降低语义嵌入过程的时间和空间开销，并通过置信度引入特征蒸馏渲染过程，提升其对步态噪声的鲁棒性。具体而言，受Feature Splatting启发，我们采用轻量级两层MLP以L2重建损失端到端训练（引用Eq.）为证明这种压缩过程不仅降低内存需求和推理速度，并保留足够信息构下游任务使用，我们与上述方法以及自身变体（不同压缩特征维度），针对语义定位任务进行对比实验，见表4。
+
+在步态噪声场景下，差异分数$D$的统计特性呈现均值低、方差小，在真实变化场景下呈现均值高，呈现明显双峰分布加以区分。其触发阈值$\tau$的选取通过在真实场景中的ROC分析确定，如表5所示。当$D$大于$\tau$时，系统执行步骤如参考文献()所示。针对审稿人提出通过简单平均计算物体可靠性分数，忽略视角依赖性的问题，以不透明度作为加权均值可能是更好的替代方案，并将该方案作为未来改进方向。
+
+外观场$F_{app}$构建的核心贡献是将在线可微分置信度标量$C_i$耦合进3DGS的渲染积分，实现对语义特征、颜色等高斯属性的空间累计具备噪声感知能力。空间场$F_{spat}$(包含场景图及其动态更新机制)提出基于置信度的差异检测机制，将可靠性分数作为差异计算的门控分数，有效抑制VLM幻觉，提升现有动态场景图对噪声的抵抗能力。几何场$F_{geo}$将外观场的置信度引入视点选择，实现几何重建任务的主动感知策略，为flow matching过程提供可靠的视觉条件。此外，通过场间的交互逻辑提升系统鲁棒性，也是本文主要贡献。具体而言，外观场通过对SLAM估计的位姿进行平滑插值，进一步通过3DGS渲染生成的平稳视角，相较于原始观测，具备更少的运动模糊，对构建外观场所需的空间拓扑信息（边为空间关系，节点为物体语义与空间位置）提供更鲁棒的支持，如表6所示。当环境发生微弱变化时，导致$D$无法触发场景更新，几何场能够通过IPS的计算，对变化物体的交互视角进行调整以确保安全。在语义定位过程中，我们发现嵌入的CLIP特征无法理解空间关系（导致Fuzzy），外观场提供的物体空间关系正好可以弥补这一问题。
+
+在修订版的稿件中，我们将系统地统一数学符号及定义，保证正文独立自洽，并用学术用语替换过度修饰的术语。我们还将补充相关工作，全面涵盖动态场景图、置信度3DGS、去除运动模糊的3DGS以及空间特征蒸馏基线方法，并纠正所有引用格式和排序错误。最后，我们承诺在论文录用后开源我们的代码（已经整理好控制和定位相关的ROS代码），并且已经遮挡了视频中短暂出现的机构标志，以严格遵守双盲政策。

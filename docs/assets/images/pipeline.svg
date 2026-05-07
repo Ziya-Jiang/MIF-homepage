@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 520" role="img" aria-labelledby="title desc">
+  <title id="title">MIF pipeline placeholder</title>
+  <desc id="desc">A three-stage pipeline placeholder for the paper homepage.</desc>
+  <rect width="1200" height="520" fill="#f8fafc"/>
+  <text x="70" y="82" fill="#0f172a" font-family="Arial, Helvetica, sans-serif" font-size="38" font-weight="700">MIF Framework Pipeline</text>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <rect x="80" y="150" width="280" height="210" rx="28" fill="#dbeafe" stroke="#2563eb" stroke-width="4"/>
+    <text x="120" y="230" fill="#1e3a8a" font-size="30" font-weight="700">Appearance Field</text>
+    <text x="120" y="280" fill="#1e40af" font-size="21">Confidence-aware semantic 3DGS</text>
+    <rect x="460" y="150" width="280" height="210" rx="28" fill="#dcfce7" stroke="#16a34a" stroke-width="4"/>
+    <text x="500" y="230" fill="#14532d" font-size="30" font-weight="700">Spatial Field</text>
+    <text x="500" y="280" fill="#166534" font-size="21">Discrepancy-triggered memory</text>
+    <rect x="840" y="150" width="280" height="210" rx="28" fill="#ffedd5" stroke="#f97316" stroke-width="4"/>
+    <text x="880" y="230" fill="#7c2d12" font-size="30" font-weight="700">Geometry Field</text>
+    <text x="880" y="280" fill="#9a3412" font-size="21">On-demand mesh and IPS</text>
+    <path d="M380 255 H435" stroke="#64748b" stroke-width="8" stroke-linecap="round"/>
+    <path d="M435 255 l-18 -14 v28 z" fill="#64748b"/>
+    <path d="M760 255 H815" stroke="#64748b" stroke-width="8" stroke-linecap="round"/>
+    <path d="M815 255 l-18 -14 v28 z" fill="#64748b"/>
+  </g>
+  <text x="70" y="450" fill="#475569" font-family="Arial, Helvetica, sans-serif" font-size="24">Replace this file with RSS_PIPELINE2.png or your final method figure.</text>
+</svg>
