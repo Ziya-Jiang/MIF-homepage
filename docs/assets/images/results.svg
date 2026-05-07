@@ -1,21 +1,33 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 560" role="img" aria-labelledby="title desc">
-  <title id="title">MIF results placeholder</title>
-  <desc id="desc">A placeholder panel for key quantitative results.</desc>
-  <rect width="1200" height="560" fill="#f8fafc"/>
-  <text x="70" y="88" fill="#0f172a" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="700">Key Results</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">MIF results overview</title>
+  <desc id="desc">Summary of quantitative and qualitative evidence shown on the MIF paper homepage.</desc>
+  <rect width="1400" height="760" fill="#f8fafc"/>
+  <text x="70" y="88" fill="#0f172a" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="700">MIF Result Evidence</text>
+  <text x="70" y="132" fill="#475569" font-family="Arial, Helvetica, sans-serif" font-size="24">Each metric is paired with its corresponding paper figure on the homepage.</text>
   <g font-family="Arial, Helvetica, sans-serif">
-    <rect x="80" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
-    <text x="120" y="235" fill="#2563eb" font-size="54" font-weight="700">94%</text>
-    <text x="120" y="290" fill="#334155" font-size="23">IPS success</text>
-    <rect x="350" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
-    <text x="390" y="235" fill="#16a34a" font-size="54" font-weight="700">91.4%</text>
-    <text x="390" y="290" fill="#334155" font-size="23">memory reduction</text>
-    <rect x="620" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
-    <text x="660" y="235" fill="#f97316" font-size="54" font-weight="700">0%</text>
-    <text x="660" y="290" fill="#334155" font-size="23">collision rate</text>
-    <rect x="890" y="150" width="230" height="250" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
-    <text x="930" y="235" fill="#7c3aed" font-size="54" font-weight="700">0.12m</text>
-    <text x="930" y="290" fill="#334155" font-size="23">navigation error</text>
+    <rect x="70" y="180" width="285" height="210" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="105" y="245" fill="#2563eb" font-size="52" font-weight="700">94%</text>
+    <text x="105" y="295" fill="#0f172a" font-size="26" font-weight="700">IPS Success</text>
+    <text x="105" y="335" fill="#475569" font-size="20">pointcloud.svg</text>
+    <rect x="390" y="180" width="285" height="210" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="425" y="245" fill="#16a34a" font-size="52" font-weight="700">91.4%</text>
+    <text x="425" y="295" fill="#0f172a" font-size="26" font-weight="700">Memory Reduction</text>
+    <text x="425" y="335" fill="#475569" font-size="20">Feature_Realtime.svg</text>
+    <rect x="710" y="180" width="285" height="210" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="745" y="245" fill="#f97316" font-size="52" font-weight="700">0%</text>
+    <text x="745" y="295" fill="#0f172a" font-size="26" font-weight="700">Collision Rate</text>
+    <text x="745" y="335" fill="#475569" font-size="20">Change.svg</text>
+    <rect x="1030" y="180" width="285" height="210" rx="26" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="1065" y="245" fill="#7c3aed" font-size="52" font-weight="700">0.12m</text>
+    <text x="1065" y="295" fill="#0f172a" font-size="26" font-weight="700">Navigation Error</text>
+    <text x="1065" y="335" fill="#475569" font-size="20">Pure_Pursuit.svg</text>
+    <rect x="70" y="450" width="600" height="190" rx="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="110" y="510" fill="#0f172a" font-size="30" font-weight="700">Real Robot and Reconstruction</text>
+    <text x="110" y="555" fill="#475569" font-size="22">showoff.svg: real-world Unitree G1 trials</text>
+    <text x="110" y="592" fill="#475569" font-size="22">meshes.svg: reconstructed object meshes</text>
+    <rect x="730" y="450" width="585" height="190" rx="28" fill="#ffffff" stroke="#cbd5e1" stroke-width="3"/>
+    <text x="770" y="510" fill="#0f172a" font-size="30" font-weight="700">Geometry and Appearance Quality</text>
+    <text x="770" y="555" fill="#475569" font-size="22">pcl-vs-mesh.svg: watertight mesh vs sparse point cloud</text>
+    <text x="770" y="592" fill="#475569" font-size="22">visual-quality.svg: denoising and appearance-field update</text>
   </g>
-  <text x="70" y="485" fill="#475569" font-family="Arial, Helvetica, sans-serif" font-size="24">Replace this file with your visual, mesh, or dynamic adaptation result image.</text>
 </svg>

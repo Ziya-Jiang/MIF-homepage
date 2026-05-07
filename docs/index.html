@@ -153,15 +153,61 @@
         </div>
         <figure class="wide-figure">
           <img src="assets/images/results.svg" alt="MIF quantitative result highlights." />
-          <figcaption>Use this area for adaptation, mesh, navigation, or qualitative result images.</figcaption>
+          <figcaption>Overview of the quantitative metrics and qualitative evidence used in the result section.</figcaption>
         </figure>
+        <h3 class="subsection-title">Metric Evidence</h3>
+        <div class="result-grid">
+          <article class="result-card">
+            <img src="assets/images/ips.svg" alt="IPS success evidence from point-cloud and mesh comparison." />
+            <h3>IPS Success</h3>
+            <p>Point-cloud evidence for interaction-pose safety and geometry-aware terminal pose verification.</p>
+          </article>
+          <article class="result-card">
+            <img src="assets/images/memory-reduction.svg" alt="Memory reduction feature realtime result." />
+            <h3>Memory Reduction</h3>
+            <p>Feature distillation reduces semantic memory footprint while preserving open-vocabulary matching quality.</p>
+          </article>
+          <article class="result-card">
+            <img src="assets/images/collision-rate.svg" alt="Dynamic adaptation result corresponding to collision rate." />
+            <h3>Collision Rate</h3>
+            <p>Dynamic memory adaptation helps avoid obsolete paths and reduces collisions after scene changes.</p>
+          </article>
+          <article class="result-card">
+            <img src="assets/images/navigation-error.svg" alt="Pure Pursuit navigation error evidence." />
+            <h3>Navigation Error</h3>
+            <p>Humanoid navigation control uses adaptive Pure Pursuit tracking to maintain stable terminal accuracy.</p>
+          </article>
+        </div>
+        <h3 class="subsection-title">Qualitative Results</h3>
+        <div class="result-grid qualitative-grid">
+          <article class="result-card">
+            <img src="assets/images/real-robot.svg" alt="Real robot experiment sequences." />
+            <h3>Real Robot Experiments</h3>
+            <p>Unitree G1 executes patrol, office navigation, dynamic replanning, and object retrieval tasks.</p>
+          </article>
+          <article class="result-card">
+            <img src="assets/images/meshes.svg" alt="Reconstructed object meshes." />
+            <h3>Reconstructed Object Meshes</h3>
+            <p>The Geometry Field reconstructs interaction-relevant object meshes for downstream safety checks.</p>
+          </article>
+          <article class="result-card">
+            <img src="assets/images/pcl-vs-mesh.svg" alt="Watertight mesh compared with sparse point cloud." />
+            <h3>Mesh vs Sparse Point Cloud</h3>
+            <p>Watertight meshes expose continuous surfaces for collision checks that sparse Gaussian centroids can miss.</p>
+          </article>
+          <article class="result-card">
+            <img src="assets/images/visual-quality.svg" alt="Denoised mapping quality and appearance-field update." />
+            <h3>Appearance Field Quality</h3>
+            <p>Confidence gating improves denoised mapping quality and supports appearance-field memory updates.</p>
+          </article>
+        </div>
       </section>
 
       <section id="gallery" class="section">
         <div class="section-heading">
           <p class="eyebrow">Gallery</p>
-          <h2>Images to Include</h2>
-          <p>Replace the placeholder images with the final figures exported from the paper and supplementary material.</p>
+          <h2>Paper Figures</h2>
+          <p>Selected figures exported from the paper and supplementary material.</p>
         </div>
         <div class="gallery-grid">
           <figure>
