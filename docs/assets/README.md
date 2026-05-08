@@ -17,7 +17,7 @@ Place the final paper media for the GitHub Pages site here.
 - `images/pcl-vs-mesh.svg`: mesh vs sparse point-cloud comparison from `PCLVSMESH.png`.
 - `images/visual-quality.svg`: denoised mapping and appearance-field update from `visual.png`.
 - `images/video-poster.svg` or `images/video-poster.jpg`: poster shown before the demo video loads.
-- `videos/demo.mp4`: main project video.
+- `videos/Supplementary_Video.mp4`: main project video.
 - `videos/adaptation.mp4`: optional dynamic-memory update video.
 - `videos/interaction.mp4`: optional IPS/manipulation-safety video.
 

@@ -12,5 +12,5 @@
   <path d="M615 308 L615 412 L706 360 Z" fill="#1d4ed8"/>
   <text x="110" y="138" fill="#ffffff" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="700">MIF Humanoid Navigation Demo</text>
   <text x="110" y="210" fill="#dbeafe" font-family="Arial, Helvetica, sans-serif" font-size="30">Replace with your real video poster and MP4/WebM assets.</text>
-  <text x="110" y="640" fill="#bfdbfe" font-family="Arial, Helvetica, sans-serif" font-size="26">Expected video: docs/assets/videos/demo.mp4</text>
+  <text x="110" y="640" fill="#bfdbfe" font-family="Arial, Helvetica, sans-serif" font-size="26">Expected video: docs/assets/videos/Supplementary_Video.mp4</text>
 </svg>

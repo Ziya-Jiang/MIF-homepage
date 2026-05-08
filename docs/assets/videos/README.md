@@ -2,7 +2,7 @@
 
 Place final demo videos in this directory:
 
-- `demo.mp4`: main project demo used by the homepage video player.
+- `Supplementary_Video.mp4`: main project demo used by the homepage video player.
 - `adaptation.mp4`: optional clip for dynamic memory adaptation.
 - `interaction.mp4`: optional clip for interaction-pose safety verification.
 
